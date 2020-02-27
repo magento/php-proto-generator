@@ -8,7 +8,7 @@ This project is a `protoc` plugin for Magento specific gRPC code generation.
 * 
 
 # Usage
-Run `protoc  `
+Run `protoc --php_out=tests/tmp/ --php-grpc_out=tests/tmp/ --magento_out=tests/tmp/ --plugin=protoc-gen-grpc=grpc_php_plugin --plugin=protoc-gen-magento=protoc-gen-magento -I tests/fixtures tests/fixtures/basic.proto`
 
 
 # Testing
