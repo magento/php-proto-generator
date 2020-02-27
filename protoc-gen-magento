@@ -1,11 +1,14 @@
 #!/usr/bin/env php
 <?php
 
-require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+require __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 
 $codeGeneratorBinaryRequest = file_get_contents('php://stdin');
 
-$compiler = new Magento\ProtoGen\Compiler();
+$templatesPath = __DIR__ . DIRECTORY_SEPARATOR . 'templates';
+$output = __DIR__ . DIRECTORY_SEPARATOR . 'tests/tmp';
+
+$compiler = new Magento\ProtoGen\Compiler($templatesPath, $output);
 $compiler->run($codeGeneratorBinaryRequest);
 
 //file_put_contents('/tmp/gg.txt', $codeGeneratorBinaryRequest);

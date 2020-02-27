@@ -9,9 +9,7 @@ namespace {{ namespace }};
 class {{ class }}
 {
 {% for field in fields %}
-
-    private ${{ field.name|lower }} = null;
-
+    private ${{ field.name|lower }};
 {% endfor %}
 
 {% for field in fields %}

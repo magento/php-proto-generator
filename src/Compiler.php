@@ -6,14 +6,11 @@ namespace Magento\ProtoGen;
 use Google\Protobuf\Compiler\CodeGeneratorRequest;
 
 class Compiler {
-    private $twig = null;
+    private $dtoGenerator;
 
-    public function __construct()
+    public function __construct(string $templatesPath,  string $outputPath)
     {
-        $loader = new \Twig\Loader\FilesystemLoader('templates');
-        $this->twig = new \Twig\Environment($loader, [
-            'cache' => false
-        ]);
+        $this->dtoGenerator = new Generator\Dto($templatesPath, $outputPath);
     }
 
     public function run($rawRequest): void
@@ -29,19 +26,7 @@ class Compiler {
 
             /** @var \Google\Protobuf\DescriptorProto $descriptor */
             foreach($proto->getMessageType() as $descriptor) {
-                $dtoTemplate = $this->twig->load('MagentoDto.php');
-                $fields = [];
-                /** @var \Google\Protobuf\FieldDescriptorProto $field */
-                foreach ($descriptor->getField() as $field) {
-                    $fields[] = ['name' => ucfirst($field->getName())];
-                }
-
-                $content = $dtoTemplate->render([
-                    'namespace' => $namespace,
-                    'class' => $descriptor->getName(),
-                    'fields' => $fields
-                ]);
-                var_dump($content);
+                $this->dtoGenerator->run($namespace, $descriptor);
             }
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */
             foreach ($proto->getService() as $service) {
