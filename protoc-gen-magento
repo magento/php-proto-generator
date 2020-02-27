@@ -1,0 +1,12 @@
+#!/usr/bin/env php
+<?php
+
+require dirname(__FILE__) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+
+$codeGeneratorBinaryRequest = file_get_contents('php://stdin');
+
+$compiler = new Magento\ProtoGen\Compiler();
+$compiler->run($codeGeneratorBinaryRequest);
+
+//file_put_contents('/tmp/gg.txt', $codeGeneratorBinaryRequest);
+exit(0);
