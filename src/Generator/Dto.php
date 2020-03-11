@@ -1,25 +1,44 @@
 <?php
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
 declare(strict_types=1);
 
 namespace Magento\ProtoGen\Generator;
 
-use Google\Protobuf\Compiler\CodeGeneratorRequest;
+use Google\Protobuf\DescriptorProto;
+use Roave\BetterReflection\Reflection\ReflectionClass;
+use Twig\Environment;
+use Twig\Loader\FilesystemLoader;
+use Twig\TemplateWrapper;
 
+/**
+ * Generates Magento DTO interfaces and their implementations.
+ *
+ * @TODO repeated fields and nested messages currently do not supported
+ */
 class Dto
 {
+    use FileWriter;
+
+    private const CLASS_TPL = 'dto.tpl';
+
+    private const INTERFACE_TPL = 'dtoInterface.tpl';
+
     /**
      * Twig template
      *
-     * @var \Twig\TemplateWrapper
+     * @var TemplateWrapper
      */
-    private $template;
-    /**
-     * @var string
-     */
-    private $outputPath;
+    private $classTemplate;
 
     /**
-     * Dto constructor.
+     * @var TemplateWrapper
+     */
+    private $interfaceTemplate;
+
+    /**
      * @param string $templatesPath
      * @param string $outputPath
      * @throws \Twig\Error\LoaderError
@@ -28,37 +47,82 @@ class Dto
      */
     public function __construct(string $templatesPath, string $outputPath)
     {
-        $loader = new \Twig\Loader\FilesystemLoader($templatesPath);
-        $twig = new \Twig\Environment($loader, [
+        $loader = new FilesystemLoader($templatesPath);
+        $twig = new Environment($loader, [
             'cache' => false
         ]);
-        $this->template = $twig->load('MagentoDto.php');
+        $this->classTemplate = $twig->load(self::CLASS_TPL);
+        $this->interfaceTemplate = $twig->load(self::INTERFACE_TPL);
         $this->outputPath = $outputPath;
     }
 
-    public function run(string $namespace, \Google\Protobuf\DescriptorProto $descriptor): void
+    /**
+     * Generates DTO interfaces and classes.
+     *
+     * @param string $namespace
+     * @param DescriptorProto $descriptor
+     * @return array `['interface' => FQCN, 'class' => FQCN]`
+     */
+    public function run(string $namespace, DescriptorProto $descriptor): array
     {
         $fields = [];
+        $dtoNamespace = str_replace('Proto', 'Data', $namespace);
+        $reflectionClass = $this->getProtoReflection($namespace, $descriptor->getName());
+
         /** @var \Google\Protobuf\FieldDescriptorProto $field */
         foreach ($descriptor->getField() as $field) {
-            $fields[] = ['name' => ucfirst($field->getName())];
+            $name = str_replace('_', '', ucwords($field->getName(), '_'));
+            $methodInfo = $reflectionClass->getMethod('get' . $name);
+            $type = (string) $methodInfo->getDocBlockReturnTypes()[0];
+            $fields[] = [
+                'name' => $name,
+                'type' => !$this->isFQCN($type) ? $type : str_replace('Proto', 'Data', $type) . 'Interface',
+                'propertyName' => lcfirst($name)
+            ];
         }
 
-        $content = $this->template->render([
-            'namespace' => $namespace,
+        $content = $this->classTemplate->render([
+            'namespace' => $dtoNamespace,
             'class' => $descriptor->getName(),
             'fields' => $fields
         ]);
-        $this->writeFile($namespace, $descriptor->getName(), $content);
+        $path = $this->convertToDirName($dtoNamespace);
+        $this->writeFile($content, $path, $descriptor->getName() . '.php');
+
+        $content = $this->interfaceTemplate->render([
+            'namespace' => $dtoNamespace,
+            'class' => $descriptor->getName(),
+            'fields' => $fields
+        ]);
+        $this->writeFile($content, $path, $descriptor->getName() . 'Interface.php');
+
+        return [
+            'interface' => $dtoNamespace . '\\' . $descriptor->getName() . 'Interface',
+            'class' => $dtoNamespace . '\\' . $descriptor->getName(),
+        ];
     }
 
-    private function writeFile($namespace, $class, $content)
+    /**
+     * Gets reflection class for proto-generated class.
+     *
+     * @param string $namespace
+     * @param string $className
+     * @return ReflectionClass
+     */
+    private function getProtoReflection(string $namespace, string $className): ReflectionClass
     {
-        $dir = str_replace('\\', DIRECTORY_SEPARATOR, $namespace);
-        $dir = rtrim($this->outputPath, '\\/') . DIRECTORY_SEPARATOR . $dir;
-        if (!is_dir($dir)) {
-            mkdir($dir, 0744, true);
-        }
-        file_put_contents($dir . DIRECTORY_SEPARATOR . $class . '2.php', $content);
+        return ReflectionClass::createFromName($namespace . '\\' . $className);
+    }
+
+    /**
+     * Checks if provided type is FQCN.
+     *
+     * @param string $type
+     * @return bool
+     */
+    private function isFQCN(string $type): bool
+    {
+        $types = ['string', 'float', 'int', 'bool', 'array'];
+        return !in_array($type, $types);
     }
 }
