@@ -15,8 +15,6 @@ use Twig\TemplateWrapper;
 
 /**
  * Generates Magento DTO interfaces and their implementations.
- *
- * @TODO repeated fields and nested messages currently do not supported
  */
 class Dto
 {
@@ -73,11 +71,26 @@ class Dto
         foreach ($descriptor->getField() as $field) {
             $name = str_replace('_', '', ucwords($field->getName(), '_'));
             $methodInfo = $reflectionClass->getMethod('get' . $name);
-            $type = (string) $methodInfo->getDocBlockReturnTypes()[0];
+            $type = $docType = (string) $methodInfo->getDocBlockReturnTypes()[0];
+            // check if a getter method parameter is a simple type
+            if ($this->isFQCN($docType)) {
+                if ($this->isRepeatedField($docType)) {
+                    // proto generated code for getter methods does not have a correct return type
+                    $setterDocType = $this->getRepeatedSetterParam($reflectionClass, 'set' . $name);
+                    $docType = str_replace('Proto', 'Data', $setterDocType) . 'Interface[]';
+                    $type = 'array';
+                } else {
+                    $type = $docType = str_replace('Proto', 'Data', $docType) . 'Interface';
+                }
+            }
             $fields[] = [
                 'name' => $name,
-                'type' => !$this->isFQCN($type) ? $type : str_replace('Proto', 'Data', $type) . 'Interface',
-                'propertyName' => lcfirst($name)
+                'type' => $type,
+                'propertyName' => lcfirst($name),
+                'doc' => [
+                    'input' => $docType,
+                    'output' => $docType
+                ]
             ];
         }
 
@@ -124,5 +137,32 @@ class Dto
     {
         $types = ['string', 'float', 'int', 'bool', 'array'];
         return !in_array($type, $types);
+    }
+
+    /**
+     * Checks if generated class from proto is a repeated field.
+     *
+     * @param string $fqcn
+     * @return bool
+     */
+    private function isRepeatedField(string $fqcn): bool
+    {
+        $reflection = ReflectionClass::createFromName($fqcn);
+        return $reflection->implementsInterface(\ArrayAccess::class);
+    }
+
+    /**
+     * Returns a param type for proto generated setter method.
+     *
+     * @param ReflectionClass $class
+     * @param string $method
+     * @return string
+     */
+    private function getRepeatedSetterParam(ReflectionClass $class, string $method): string
+    {
+        $methodInfo = $class->getMethod($method);
+        $pattern = '/@param\s(\S{1,})\[/';
+        preg_match($pattern, $methodInfo->getDocComment(), $matches, PREG_OFFSET_CAPTURE, 0);
+        return $matches[1][0];
     }
 }
