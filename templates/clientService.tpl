@@ -31,11 +31,7 @@ class {{ name }} implements {{ interface }}
 
     private function {{ method.name }}ToProto({{ method.input.interface }} $value): {{ method.proto.input}}
     {
-        // @TODO does not work for complex objects
-        $proto = new {{ method.proto.input }}();
-{% for getter in method.input.methods %}
-        $proto->set{{ getter.name }}($value->get{{ getter.name }}());
-{% endfor %}
+        {{ method.input.content|raw }}
 
         return $proto;
     }

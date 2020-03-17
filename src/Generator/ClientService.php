@@ -8,10 +8,10 @@ declare(strict_types=1);
 namespace Magento\ProtoGen\Generator;
 
 use Google\Protobuf\ServiceDescriptorProto;
+use Roave\BetterReflection\Reflection\ReflectionClass;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TemplateWrapper;
-use Roave\BetterReflection\Reflection\ReflectionClass;
 
 /**
  * Generates gRPC service interfaces and classes.
@@ -20,9 +20,13 @@ class ClientService
 {
     use FileWriter;
 
+    use NamespaceConverter;
+
     private const INTERFACE_TPL = 'serviceInterface.tpl';
 
     private const SERVICE_TPL = 'clientService.tpl';
+
+    private const TO_PROTO_METHOD_TPL = 'toProtoConverter.tpl';
 
     /**
      * @var TemplateWrapper
@@ -33,6 +37,11 @@ class ClientService
      * @var TemplateWrapper
      */
     private $serviceTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
+    private $toProtoTemplate;
 
     /**
      * @param string $templatesPath
@@ -49,6 +58,7 @@ class ClientService
         ]);
         $this->interfaceTemplate = $twig->load(self::INTERFACE_TPL);
         $this->serviceTemplate = $twig->load(self::SERVICE_TPL);
+        $this->toProtoTemplate = $twig->load(self::TO_PROTO_METHOD_TPL);
         $this->outputPath = $outputPath;
     }
 
@@ -61,7 +71,7 @@ class ClientService
      */
     public function run(string $namespace, ServiceDescriptorProto $descriptorProto): array
     {
-        $dtoNamespace = str_replace('Proto', 'Data', $namespace);
+        $dtoNamespace = $this->fromProto($namespace, 'Data');
         $serviceNamespace = str_replace('\Proto', '', $namespace);
         $protoServiceClass = $namespace . '\\'. $descriptorProto->getName() . 'Client';
         $reflectionClass = ReflectionClass::createFromName($protoServiceClass);
@@ -79,7 +89,7 @@ class ClientService
                 'name' => $method->getName(),
                 'input' => [
                     'interface' => '\\'. $dtoNamespace . '\\' . $param . 'Interface',
-                    'methods' => $this->getListOfClassProps('\\' . $dtoNamespace . '\\' . $param . 'Interface'),
+                    'content' => $this->getRequestDtoContent('\\' . $dtoNamespace . '\\' . $param . 'Interface'),
                 ],
                 'output' => [
                     'class' => '\\'. $dtoNamespace . '\\' . $return,
@@ -127,15 +137,92 @@ class ClientService
      */
     private function getListOfClassProps(string $fqcn): array
     {
-        $result = [];
+        $props = [];
         $reflection = ReflectionClass::createFromName($fqcn);
         $methods = $reflection->getImmediateMethods(\ReflectionMethod::IS_PUBLIC);
         foreach ($methods as $method) {
-            if (strpos($method->getName(), 'get', 0) !== false) {
-                $result[] = ['name' => substr($method->getName(), 3)];
+            // skip not getter methods to do not duplicate properties
+            if (strpos($method->getName(), 'get', 0) === false) {
+                continue;
             }
+
+            $type = $method->getReturnType()->getName();
+            $property = [
+                'name' => substr($method->getName(), 3),
+                'in_type' => $type,
+                'array' => false,
+                'object' => false
+            ];
+            // getter returns object
+            if (!$method->getReturnType()->isBuiltin()) {
+                $property['in_type'] = '\\' . $type;
+                $property['out_type'] = '\\' . $this->getProtoFqcn($type);
+                $property['object'] = true;
+                $property['props'] = $this->getListOfClassProps($type);
+                // getter returns array of objects
+            } elseif ($method->getReturnType()->getName() === 'array') {
+                $docType = str_replace('[]', '', (string) $method->getDocBlockReturnTypes()[0]);
+                $property['props'] = $this->getListOfClassProps($docType);
+                $property['array'] = true;
+                $property['in_type'] = $docType;
+                $property['out_type'] = $this->getProtoFqcn($docType);
+            }
+            $props[] = $property;
         }
 
-        return $result;
+        return $props;
+    }
+
+    /**
+     * Generates DTO converter method body based on provided Request DTO.
+     *
+     * @param string $fqcn
+     * @return string
+     */
+    private function getRequestDtoContent(string $fqcn): string
+    {
+        $out = str_replace('Interface', '', $this->toProto($fqcn, 'Data'));
+        $props = $this->getListOfClassProps($fqcn);
+        $content = $this->renderPropertiesTree('value', $fqcn, 'proto', $out, $props);
+        return $content;
+    }
+
+    /**
+     * Renders converter method body for provided input and output classes.
+     *
+     * @param string $inVar
+     * @param string $inType
+     * @param string $outVar
+     * @param string $outType
+     * @param array $properties
+     * @return string
+     */
+    private function renderPropertiesTree(
+        string $inVar,
+        string $inType,
+        string $outVar,
+        string $outType,
+        array $properties
+    ): string {
+        return $this->toProtoTemplate->render(
+            [
+                'in_var' => $inVar,
+                'in_type' => $inType,
+                'out_var' => $outVar,
+                'out_type' => $outType,
+                'props' => $properties
+            ]
+        );
+    }
+
+    /**
+     * Gets proto-generated DTO FQCN from Magento DTO.
+     *
+     * @param string $fqcn
+     * @return string
+     */
+    private function getProtoFqcn(string $fqcn): string
+    {
+        return str_replace('Interface', '', $this->toProto($fqcn, 'Data'));
     }
 }

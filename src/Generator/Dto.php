@@ -20,6 +20,8 @@ class Dto
 {
     use FileWriter;
 
+    use NamespaceConverter;
+
     private const CLASS_TPL = 'dto.tpl';
 
     private const INTERFACE_TPL = 'dtoInterface.tpl';
@@ -77,10 +79,10 @@ class Dto
                 if ($this->isRepeatedField($docType)) {
                     // proto generated code for getter methods does not have a correct return type
                     $setterDocType = $this->getRepeatedSetterParam($reflectionClass, 'set' . $name);
-                    $docType = str_replace('Proto', 'Data', $setterDocType) . 'Interface[]';
+                    $docType = $this->fromProto($setterDocType, 'Data') . 'Interface[]';
                     $type = 'array';
                 } else {
-                    $type = $docType = str_replace('Proto', 'Data', $docType) . 'Interface';
+                    $type = $docType = $this->fromProto($docType, 'Data') . 'Interface';
                 }
             }
             $fields[] = [
