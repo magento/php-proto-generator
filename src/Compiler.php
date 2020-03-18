@@ -10,6 +10,7 @@ namespace Magento\ProtoGen;
 use Google\Protobuf\Compiler\CodeGeneratorRequest;
 use Magento\ProtoGen\Generator\Di;
 use Magento\ProtoGen\Generator\ClientService;
+use Magento\ProtoGen\Generator\NamespaceConverter;
 use Magento\ProtoGen\Generator\Skeleton;
 
 /**
@@ -17,6 +18,8 @@ use Magento\ProtoGen\Generator\Skeleton;
  */
 class Compiler
 {
+    use NamespaceConverter;
+
     /**
      * @var Generator\Dto
      */
@@ -66,9 +69,7 @@ class Compiler
 
         /** @var \Google\Protobuf\FileDescriptorProto $proto */
         foreach ($request->getProtoFile() as $proto) {
-            $namespaceChunk = explode('.', $proto->getPackage());
-            $namespaceChunk = array_map('ucfirst', $namespaceChunk);
-            $namespace = implode('\\', $namespaceChunk);
+            $namespace = $this->convertProtoNameToFqcn($proto->getPackage());
 
             /** @var \Google\Protobuf\DescriptorProto $descriptor */
             foreach ($proto->getMessageType() as $descriptor) {
@@ -81,6 +82,7 @@ class Compiler
             }
         }
 
+        $namespaceChunk = explode('\\', $namespace);
         [$vendor, $module] = [$namespaceChunk[0], $namespaceChunk[1]];
         $this->skeletonGenerator->run($vendor, $module);
 

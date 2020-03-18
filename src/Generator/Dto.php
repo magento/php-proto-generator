@@ -8,7 +8,9 @@ declare(strict_types=1);
 namespace Magento\ProtoGen\Generator;
 
 use Google\Protobuf\DescriptorProto;
-use Roave\BetterReflection\Reflection\ReflectionClass;
+use Google\Protobuf\FieldDescriptorProto;
+use Google\Protobuf\FieldDescriptorProto\Label;
+use Google\Protobuf\FieldDescriptorProto\Type;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TemplateWrapper;
@@ -25,6 +27,22 @@ class Dto
     private const CLASS_TPL = 'dto.tpl';
 
     private const INTERFACE_TPL = 'dtoInterface.tpl';
+
+    private const TYPE_MESSAGE = 'message';
+
+    private static $typeMap = [
+        Type::TYPE_DOUBLE => 'double',
+        Type::TYPE_FLOAT => 'float',
+        Type::TYPE_INT64 => 'int',
+        Type::TYPE_UINT64 => 'int',
+        Type::TYPE_INT32 => 'int',
+        Type::TYPE_BOOL => 'bool',
+        Type::TYPE_STRING => 'string',
+        Type::TYPE_MESSAGE => self::TYPE_MESSAGE,
+        Type::TYPE_UINT32 => 'int',
+        Type::TYPE_SINT32 => 'int',
+        Type::TYPE_SINT64 => 'int',
+    ];
 
     /**
      * Twig template
@@ -66,23 +84,19 @@ class Dto
     public function run(string $namespace, DescriptorProto $descriptor): array
     {
         $fields = [];
-        $dtoNamespace = str_replace('Proto', 'Data', $namespace);
-        $reflectionClass = $this->getProtoReflection($namespace, $descriptor->getName());
+        $dtoNamespace = $this->fromProto($namespace, 'Data');
 
         /** @var \Google\Protobuf\FieldDescriptorProto $field */
         foreach ($descriptor->getField() as $field) {
             $name = str_replace('_', '', ucwords($field->getName(), '_'));
-            $methodInfo = $reflectionClass->getMethod('get' . $name);
-            $type = $docType = (string) $methodInfo->getDocBlockReturnTypes()[0];
+            $type = $docType = $this->getType($field);
             // check if a getter method parameter is a simple type
-            if ($this->isFQCN($docType)) {
-                if ($this->isRepeatedField($docType)) {
-                    // proto generated code for getter methods does not have a correct return type
-                    $setterDocType = $this->getRepeatedSetterParam($reflectionClass, 'set' . $name);
-                    $docType = $this->fromProto($setterDocType, 'Data') . 'Interface[]';
+            if ($type === self::TYPE_MESSAGE) {
+                $type = $docType = $this->fromProto($this->convertProtoNameToFqcn($field->getTypeName()), 'Data') . 'Interface';
+                // check if message is repeated
+                if ($field->getLabel() === Label::LABEL_REPEATED) {
+                    $docType .= '[]';
                     $type = 'array';
-                } else {
-                    $type = $docType = $this->fromProto($docType, 'Data') . 'Interface';
                 }
             }
             $fields[] = [
@@ -118,53 +132,18 @@ class Dto
     }
 
     /**
-     * Gets reflection class for proto-generated class.
+     * Detects PHP type based on proto type.
      *
-     * @param string $namespace
-     * @param string $className
-     * @return ReflectionClass
-     */
-    private function getProtoReflection(string $namespace, string $className): ReflectionClass
-    {
-        return ReflectionClass::createFromName($namespace . '\\' . $className);
-    }
-
-    /**
-     * Checks if provided type is FQCN.
-     *
-     * @param string $type
-     * @return bool
-     */
-    private function isFQCN(string $type): bool
-    {
-        $types = ['string', 'float', 'int', 'bool', 'array'];
-        return !in_array($type, $types);
-    }
-
-    /**
-     * Checks if generated class from proto is a repeated field.
-     *
-     * @param string $fqcn
-     * @return bool
-     */
-    private function isRepeatedField(string $fqcn): bool
-    {
-        $reflection = ReflectionClass::createFromName($fqcn);
-        return $reflection->implementsInterface(\ArrayAccess::class);
-    }
-
-    /**
-     * Returns a param type for proto generated setter method.
-     *
-     * @param ReflectionClass $class
-     * @param string $method
+     * @param FieldDescriptorProto $field
      * @return string
      */
-    private function getRepeatedSetterParam(ReflectionClass $class, string $method): string
+    private function getType(FieldDescriptorProto $field): string
     {
-        $methodInfo = $class->getMethod($method);
-        $pattern = '/@param\s(\S{1,})\[/';
-        preg_match($pattern, $methodInfo->getDocComment(), $matches, PREG_OFFSET_CAPTURE, 0);
-        return $matches[1][0];
+        $type = self::$typeMap[$field->getType()] ?? null;
+        if ($type === null) {
+            throw new \InvalidArgumentException('{' . $field->getName() . ':' . $field->getType() . '} is not supported');
+        }
+
+        return (string)$type;
     }
 }

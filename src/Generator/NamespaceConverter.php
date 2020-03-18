@@ -15,7 +15,7 @@ trait NamespaceConverter
     private static $protoNamespace = 'Proto';
 
     /**
-     * Converts Protobuf namespace to Magento namespace.
+     * Converts Protobuf namespace to PHP FQCN.
      *
      * @param string $namespace
      * @param string $replace
@@ -36,5 +36,18 @@ trait NamespaceConverter
     public function toProto(string $namespace, string $old): string
     {
         return str_replace($old, self::$protoNamespace, $namespace);
+    }
+
+    /**
+     * Converts proto name to PHP FQCN.
+     *
+     * @param string $name
+     * @return string
+     */
+    public function convertProtoNameToFqcn(string $name): string
+    {
+        $namespaceChunk = explode('.', $name);
+        $namespaceChunk = array_map('ucfirst', $namespaceChunk);
+        return implode('\\', $namespaceChunk);
     }
 }
