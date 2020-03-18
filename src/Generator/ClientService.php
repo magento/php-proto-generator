@@ -7,8 +7,11 @@ declare(strict_types=1);
 
 namespace Magento\ProtoGen\Generator;
 
+use Google\Protobuf\DescriptorProto;
+use Google\Protobuf\FieldDescriptorProto;
+use Google\Protobuf\FieldDescriptorProto\Type;
+use Google\Protobuf\FileDescriptorProto;
 use Google\Protobuf\ServiceDescriptorProto;
-use Roave\BetterReflection\Reflection\ReflectionClass;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TemplateWrapper;
@@ -21,6 +24,8 @@ class ClientService
     use FileWriter;
 
     use NamespaceConverter;
+
+    use TypeResolver;
 
     private const INTERFACE_TPL = 'serviceInterface.tpl';
 
@@ -69,36 +74,28 @@ class ClientService
      * @param ServiceDescriptorProto $descriptorProto
      * @return array
      */
-    public function run(string $namespace, ServiceDescriptorProto $descriptorProto): array
+    public function run(string $namespace, ServiceDescriptorProto $descriptorProto, FileDescriptorProto $fileDescriptorProto): array
     {
-        $dtoNamespace = $this->fromProto($namespace, 'Data');
         $serviceNamespace = str_replace('\Proto', '', $namespace);
         $protoServiceClass = $namespace . '\\'. $descriptorProto->getName() . 'Client';
-        $reflectionClass = ReflectionClass::createFromName($protoServiceClass);
 
         $methods = [];
         /** @var \Google\Protobuf\MethodDescriptorProto $method */
         foreach ($descriptorProto->getMethod() as $method) {
-            $paramChunks = explode('.', $method->getInputType());
-            $param = end($paramChunks);
-            $returnChunks = explode('.', $method->getOutputType());
-            $return = end($returnChunks);
-            $reflectionMethod = $reflectionClass->getMethod($method->getName());
-            $reflectionParam = $reflectionMethod->getParameter('argument');
-            $mInput = '\\'. $dtoNamespace . '\\' . $param;
-            $pInput = '\\' . (string) $reflectionParam->getType();
-            $mOutput = '\\'. $dtoNamespace . '\\' . $return;
-            $pOutput = '\\' . $namespace . '\\' . $return;
+            $pInput = $this->convertProtoNameToFqcn($method->getInputType());
+            $pOutput = $this->convertProtoNameToFqcn($method->getOutputType());
+            $mInput = $this->fromProto($pInput, 'Data');
+            $mOutput = $this->fromProto($pOutput, 'Data');
             $methods[] = [
                 'name' => $method->getName(),
                 'input' => [
-                    'interface' => $mInput,
-                    'content' => $this->getRequestDtoContent($mInput, $pInput),
+                    'interface' => $mInput . 'Interface',
+                    'content' => $this->getRequestDtoContent($mInput, $pInput, $fileDescriptorProto),
                 ],
                 'output' => [
                     'class' => $mOutput,
-                    'interface' => '\\'. $dtoNamespace . '\\' . $return . 'Interface',
-                    'content' => $this->getResponseDtoContent($mOutput, $pOutput),
+                    'interface' => $mOutput . 'Interface',
+                    'content' => $this->getResponseDtoContent($mOutput, $pOutput, $fileDescriptorProto),
                 ],
                 'proto' => [
                     'input' => $pInput,
@@ -135,44 +132,46 @@ class ClientService
     }
 
     /**
-     * Gets list of class properties used for getters and setters generation.
+     * Gets list of message properties properties used for getters and setters generation.
      *
      * @param string $fqcn
      * @param string $in
      * @param string $out
      * @return array
      */
-    private function getListOfClassProps(string $fqcn, string $in = 'in_type', string $out = 'out_type'): array
-    {
+    private function getPropertyList(
+        string $fqcn,
+        FileDescriptorProto $fileDescriptorProto,
+        string $in = 'in_type',
+        string $out = 'out_type'
+    ): array {
         $props = [];
-        $reflection = ReflectionClass::createFromName($fqcn);
-        $methods = $reflection->getImmediateMethods(\ReflectionMethod::IS_PUBLIC);
-        foreach ($methods as $method) {
-            // skip not getter methods to do not duplicate properties
-            if (strpos($method->getName(), 'get', 0) === false) {
-                continue;
-            }
-
-            $type = $method->getReturnType()->getName();
+        $methodDescriptor = $this->getMessageDescriptorByName($fileDescriptorProto, $fqcn);
+        /** @var \Google\Protobuf\FieldDescriptorProto $field */
+        foreach ($methodDescriptor->getField() as $field) {
+            $type = $this->getType($field);
+            $name = str_replace('_', '', ucwords($field->getName(), '_'));
             $property = [
-                'name' => substr($method->getName(), 3),
+                'name' => $name,
                 $in => $type,
                 'array' => false,
                 'object' => false
             ];
-            // getter returns object
-            if (!$method->getReturnType()->isBuiltin()) {
-                $property[$in] = '\\' . str_replace('Interface', '', $type);
-                $property[$out] = '\\' . $this->getProtoFqcn($type);
-                $property['object'] = true;
-                $property['props'] = $this->getListOfClassProps($type, $in, $out);
-            // getter returns array of objects
-            } elseif ($method->getReturnType()->getName() === 'array') {
-                $docType = str_replace('[]', '', (string) $method->getDocBlockReturnTypes()[0]);
-                $property['props'] = $this->getListOfClassProps($docType, $in, $out);
-                $property['array'] = true;
-                $property[$in] = str_replace('Interface', '', $docType);
-                $property[$out] = $this->getProtoFqcn($docType);
+            if ((int) $type === Type::TYPE_MESSAGE) {
+                $className = $this->convertProtoNameToFqcn($field->getTypeName());
+                // getter returns array of objects
+                if ($field->getLabel() === FieldDescriptorProto\Label::LABEL_REPEATED) {
+                    $property['props'] = $this->getPropertyList($className, $fileDescriptorProto, $in, $out);
+                    $property['array'] = true;
+                    $property[$in] = $this->fromProto($className, 'Data');
+                    $property[$out] = $className;
+                    // getter returns an object
+                } else {
+                    $property[$in] = $this->fromProto($className, 'Data');
+                    $property[$out] = $className;
+                    $property['object'] = true;
+                    $property['props'] = $this->getPropertyList($className, $fileDescriptorProto, $in, $out);
+                }
             }
             $props[] = $property;
         }
@@ -184,11 +183,16 @@ class ClientService
      * Generates DTO converter method body based on provided Request DTO.
      *
      * @param string $fqcn
+     * @param string $proto
+     * @param FileDescriptorProto $fileDescriptorProto
      * @return string
      */
-    private function getRequestDtoContent(string $fqcn, string $proto): string
-    {
-        $props = $this->getListOfClassProps($fqcn);
+    private function getRequestDtoContent(
+        string $fqcn,
+        string $proto,
+        FileDescriptorProto $fileDescriptorProto
+    ): string {
+        $props = $this->getPropertyList($proto, $fileDescriptorProto);
         $content = $this->renderPropertiesTree('value', $fqcn, 'proto', $proto, $props);
         return $content;
     }
@@ -198,11 +202,15 @@ class ClientService
      *
      * @param string $fqcn
      * @param string $proto
+     * @param FileDescriptorProto $fileDescriptorProto
      * @return string
      */
-    private function getResponseDtoContent(string $fqcn, string $proto): string
-    {
-        $props = $this->getListOfClassProps($fqcn, 'out_type', 'in_type');
+    private function getResponseDtoContent(
+        string $fqcn,
+        string $proto,
+        FileDescriptorProto $fileDescriptorProto
+    ): string {
+        $props = $this->getPropertyList($proto, $fileDescriptorProto, 'out_type', 'in_type');
         $content = $this->renderPropertiesTree('value', $proto, 'out', $fqcn, $props);
         return $content;
     }
@@ -236,13 +244,23 @@ class ClientService
     }
 
     /**
-     * Gets proto-generated DTO FQCN from Magento DTO.
+     * Gets Protobuf message descriptor by name.
      *
+     * @param FileDescriptorProto $fileDescriptorProto
      * @param string $fqcn
-     * @return string
+     * @return DescriptorProto|null
      */
-    private function getProtoFqcn(string $fqcn): string
+    private function getMessageDescriptorByName(FileDescriptorProto $fileDescriptorProto, string $fqcn): ?DescriptorProto
     {
-        return str_replace('Interface', '', $this->toProto($fqcn, 'Data'));
+        $chunks = explode('\\', $fqcn);
+        $fieldName = end($chunks);
+        /** @var \Google\Protobuf\DescriptorProto $descriptor */
+        foreach ($fileDescriptorProto->getMessageType() as $descriptor) {
+            if ($descriptor->getName() === $fieldName) {
+                return $descriptor;
+            }
+        }
+
+        return null;
     }
 }

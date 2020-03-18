@@ -12,7 +12,6 @@
   },
   "autoload": {
     "psr-4": {
-      "Magento\\": "output/Magento",
       "Magento\\ProtoGen\\": "src",
       "Google\\": "lib/Google",
       "GPBMetadata\\": "lib/GPBMetadata"

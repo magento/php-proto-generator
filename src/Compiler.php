@@ -78,7 +78,7 @@ class Compiler
 
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */
             foreach ($proto->getService() as $service) {
-                $this->clientServiceGenerator->run($namespace, $service);
+                $this->clientServiceGenerator->run($namespace, $service, $proto);
             }
         }
 
