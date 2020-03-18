@@ -21,8 +21,15 @@ message GreetingRequest {
     repeated RepeatedFields fields = 4;
 }
 
+message SubResponse {
+    string key = 1;
+    int32 value = 2;
+}
+
 message GreetingResponse {
     string greeting = 1;
+    SubResponse additional_data = 2;
+    repeated RepeatedFields fields = 3;
 }
 
 service GreetingService {

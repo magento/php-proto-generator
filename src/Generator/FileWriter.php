@@ -7,6 +7,9 @@ declare(strict_types=1);
 
 namespace Magento\ProtoGen\Generator;
 
+/**
+ * Helper trait to work with file system.
+ */
 trait FileWriter
 {
     /**

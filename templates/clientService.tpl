@@ -38,9 +38,9 @@ class {{ name }} implements {{ interface }}
 
     private function {{ method.name }}FromProto({{ method.proto.output }} $value): {{ method.output.interface }}
     {
-        $result = new {{ method.output.class }}();
+        {{ method.output.content|raw }}
 
-        return $result;
+        return $out;
     }
 {% endfor %}
 }

@@ -85,19 +85,24 @@ class ClientService
             $return = end($returnChunks);
             $reflectionMethod = $reflectionClass->getMethod($method->getName());
             $reflectionParam = $reflectionMethod->getParameter('argument');
+            $mInput = '\\'. $dtoNamespace . '\\' . $param;
+            $pInput = '\\' . (string) $reflectionParam->getType();
+            $mOutput = '\\'. $dtoNamespace . '\\' . $return;
+            $pOutput = '\\' . $namespace . '\\' . $return;
             $methods[] = [
                 'name' => $method->getName(),
                 'input' => [
-                    'interface' => '\\'. $dtoNamespace . '\\' . $param . 'Interface',
-                    'content' => $this->getRequestDtoContent('\\' . $dtoNamespace . '\\' . $param . 'Interface'),
+                    'interface' => $mInput,
+                    'content' => $this->getRequestDtoContent($mInput, $pInput),
                 ],
                 'output' => [
-                    'class' => '\\'. $dtoNamespace . '\\' . $return,
+                    'class' => $mOutput,
                     'interface' => '\\'. $dtoNamespace . '\\' . $return . 'Interface',
+                    'content' => $this->getResponseDtoContent($mOutput, $pOutput),
                 ],
                 'proto' => [
-                    'input' => '\\' . (string) $reflectionParam->getType(),
-                    'output' => '\\' . $namespace . '\\' . $return
+                    'input' => $pInput,
+                    'output' => $pOutput,
                 ],
             ];
         }
@@ -130,12 +135,14 @@ class ClientService
     }
 
     /**
-     * Get list of class properties used for getters and setters generation.
+     * Gets list of class properties used for getters and setters generation.
      *
      * @param string $fqcn
+     * @param string $in
+     * @param string $out
      * @return array
      */
-    private function getListOfClassProps(string $fqcn): array
+    private function getListOfClassProps(string $fqcn, string $in = 'in_type', string $out = 'out_type'): array
     {
         $props = [];
         $reflection = ReflectionClass::createFromName($fqcn);
@@ -149,23 +156,23 @@ class ClientService
             $type = $method->getReturnType()->getName();
             $property = [
                 'name' => substr($method->getName(), 3),
-                'in_type' => $type,
+                $in => $type,
                 'array' => false,
                 'object' => false
             ];
             // getter returns object
             if (!$method->getReturnType()->isBuiltin()) {
-                $property['in_type'] = '\\' . $type;
-                $property['out_type'] = '\\' . $this->getProtoFqcn($type);
+                $property[$in] = '\\' . str_replace('Interface', '', $type);
+                $property[$out] = '\\' . $this->getProtoFqcn($type);
                 $property['object'] = true;
-                $property['props'] = $this->getListOfClassProps($type);
-                // getter returns array of objects
+                $property['props'] = $this->getListOfClassProps($type, $in, $out);
+            // getter returns array of objects
             } elseif ($method->getReturnType()->getName() === 'array') {
                 $docType = str_replace('[]', '', (string) $method->getDocBlockReturnTypes()[0]);
-                $property['props'] = $this->getListOfClassProps($docType);
+                $property['props'] = $this->getListOfClassProps($docType, $in, $out);
                 $property['array'] = true;
-                $property['in_type'] = $docType;
-                $property['out_type'] = $this->getProtoFqcn($docType);
+                $property[$in] = str_replace('Interface', '', $docType);
+                $property[$out] = $this->getProtoFqcn($docType);
             }
             $props[] = $property;
         }
@@ -179,11 +186,24 @@ class ClientService
      * @param string $fqcn
      * @return string
      */
-    private function getRequestDtoContent(string $fqcn): string
+    private function getRequestDtoContent(string $fqcn, string $proto): string
     {
-        $out = str_replace('Interface', '', $this->toProto($fqcn, 'Data'));
         $props = $this->getListOfClassProps($fqcn);
-        $content = $this->renderPropertiesTree('value', $fqcn, 'proto', $out, $props);
+        $content = $this->renderPropertiesTree('value', $fqcn, 'proto', $proto, $props);
+        return $content;
+    }
+
+    /**
+     * Generates DTO converter method body based on provided Response DTO.
+     *
+     * @param string $fqcn
+     * @param string $proto
+     * @return string
+     */
+    private function getResponseDtoContent(string $fqcn, string $proto): string
+    {
+        $props = $this->getListOfClassProps($fqcn, 'out_type', 'in_type');
+        $content = $this->renderPropertiesTree('value', $proto, 'out', $fqcn, $props);
         return $content;
     }
 
