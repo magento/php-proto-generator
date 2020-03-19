@@ -10,7 +10,6 @@ namespace Magento\ProtoGen\Generator;
 use Google\Protobuf\DescriptorProto;
 use Google\Protobuf\FieldDescriptorProto;
 use Google\Protobuf\FieldDescriptorProto\Type;
-use Google\Protobuf\FileDescriptorProto;
 use Google\Protobuf\ServiceDescriptorProto;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
@@ -72,9 +71,10 @@ class ClientService
      *
      * @param string $namespace
      * @param ServiceDescriptorProto $descriptorProto
+     * @param array $filleDescriptorAggr
      * @return array
      */
-    public function run(string $namespace, ServiceDescriptorProto $descriptorProto, FileDescriptorProto $fileDescriptorProto): array
+    public function run(string $namespace, ServiceDescriptorProto $descriptorProto, array $filleDescriptorAggr): array
     {
         $serviceNamespace = str_replace('\Proto', '', $namespace);
         $protoServiceClass = $namespace . '\\'. $descriptorProto->getName() . 'Client';
@@ -90,12 +90,12 @@ class ClientService
                 'name' => $method->getName(),
                 'input' => [
                     'interface' => $mInput . 'Interface',
-                    'content' => $this->getRequestDtoContent($mInput, $pInput, $fileDescriptorProto),
+                    'content' => $this->getRequestDtoContent($mInput, $pInput, $filleDescriptorAggr),
                 ],
                 'output' => [
                     'class' => $mOutput,
                     'interface' => $mOutput . 'Interface',
-                    'content' => $this->getResponseDtoContent($mOutput, $pOutput, $fileDescriptorProto),
+                    'content' => $this->getResponseDtoContent($mOutput, $pOutput, $filleDescriptorAggr),
                 ],
                 'proto' => [
                     'input' => $pInput,
@@ -135,18 +135,22 @@ class ClientService
      * Gets list of message properties properties used for getters and setters generation.
      *
      * @param string $fqcn
+     * @param array $fileDescriptorAggregate
      * @param string $in
      * @param string $out
      * @return array
      */
     private function getPropertyList(
         string $fqcn,
-        FileDescriptorProto $fileDescriptorProto,
+        array $fileDescriptorAggregate,
         string $in = 'in_type',
         string $out = 'out_type'
     ): array {
         $props = [];
-        $methodDescriptor = $this->getMessageDescriptorByName($fileDescriptorProto, $fqcn);
+        $methodDescriptor = $this->getMessageDescriptorByName($fileDescriptorAggregate, $fqcn);
+        if ($methodDescriptor === null) {
+            throw new \InvalidArgumentException('Cannot find proto file descriptor for ' . $fqcn);
+        }
         /** @var \Google\Protobuf\FieldDescriptorProto $field */
         foreach ($methodDescriptor->getField() as $field) {
             $type = $this->getType($field);
@@ -161,7 +165,7 @@ class ClientService
                 $className = $this->convertProtoNameToFqcn($field->getTypeName());
                 // getter returns array of objects
                 if ($field->getLabel() === FieldDescriptorProto\Label::LABEL_REPEATED) {
-                    $property['props'] = $this->getPropertyList($className, $fileDescriptorProto, $in, $out);
+                    $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
                     $property['array'] = true;
                     $property[$in] = $this->fromProto($className, 'Data');
                     $property[$out] = $className;
@@ -170,7 +174,7 @@ class ClientService
                     $property[$in] = $this->fromProto($className, 'Data');
                     $property[$out] = $className;
                     $property['object'] = true;
-                    $property['props'] = $this->getPropertyList($className, $fileDescriptorProto, $in, $out);
+                    $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
                 }
             }
             $props[] = $property;
@@ -184,15 +188,15 @@ class ClientService
      *
      * @param string $fqcn
      * @param string $proto
-     * @param FileDescriptorProto $fileDescriptorProto
+     * @param array $fileDescriptorAggregate
      * @return string
      */
     private function getRequestDtoContent(
         string $fqcn,
         string $proto,
-        FileDescriptorProto $fileDescriptorProto
+        array $fileDescriptorAggregate
     ): string {
-        $props = $this->getPropertyList($proto, $fileDescriptorProto);
+        $props = $this->getPropertyList($proto, $fileDescriptorAggregate);
         $content = $this->renderPropertiesTree('value', $fqcn, 'proto', $proto, $props);
         return $content;
     }
@@ -202,15 +206,15 @@ class ClientService
      *
      * @param string $fqcn
      * @param string $proto
-     * @param FileDescriptorProto $fileDescriptorProto
+     * @param array $fileDescriptorAggregate
      * @return string
      */
     private function getResponseDtoContent(
         string $fqcn,
         string $proto,
-        FileDescriptorProto $fileDescriptorProto
+        array $fileDescriptorAggregate
     ): string {
-        $props = $this->getPropertyList($proto, $fileDescriptorProto, 'out_type', 'in_type');
+        $props = $this->getPropertyList($proto, $fileDescriptorAggregate, 'out_type', 'in_type');
         $content = $this->renderPropertiesTree('value', $proto, 'out', $fqcn, $props);
         return $content;
     }
@@ -246,18 +250,20 @@ class ClientService
     /**
      * Gets Protobuf message descriptor by name.
      *
-     * @param FileDescriptorProto $fileDescriptorProto
+     * @param array $fileDescriptorAggregate
      * @param string $fqcn
      * @return DescriptorProto|null
      */
-    private function getMessageDescriptorByName(FileDescriptorProto $fileDescriptorProto, string $fqcn): ?DescriptorProto
+    private function getMessageDescriptorByName(array $fileDescriptorAggregate, string $fqcn): ?DescriptorProto
     {
         $chunks = explode('\\', $fqcn);
         $fieldName = end($chunks);
-        /** @var \Google\Protobuf\DescriptorProto $descriptor */
-        foreach ($fileDescriptorProto->getMessageType() as $descriptor) {
-            if ($descriptor->getName() === $fieldName) {
-                return $descriptor;
+        foreach ($fileDescriptorAggregate as $fileDescriptor) {
+            /** @var \Google\Protobuf\DescriptorProto $descriptor */
+            foreach ($fileDescriptor->getMessageType() as $descriptor) {
+                if ($descriptor->getName() === $fieldName) {
+                    return $descriptor;
+                }
             }
         }
 

@@ -66,9 +66,11 @@ class Compiler
         $preferences = [];
         $request = new CodeGeneratorRequest();
         $request->mergeFromString($rawRequest);
+        $protoAggregate = [];
 
         /** @var \Google\Protobuf\FileDescriptorProto $proto */
         foreach ($request->getProtoFile() as $proto) {
+            $protoAggregate[] = $proto;
             $namespace = $this->convertProtoNameToFqcn($proto->getPackage());
 
             /** @var \Google\Protobuf\DescriptorProto $descriptor */
@@ -78,7 +80,7 @@ class Compiler
 
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */
             foreach ($proto->getService() as $service) {
-                $this->clientServiceGenerator->run($namespace, $service, $proto);
+                $this->clientServiceGenerator->run($namespace, $service, $protoAggregate);
             }
         }
 
