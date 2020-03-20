@@ -11,5 +11,4 @@ $output = __DIR__ . DIRECTORY_SEPARATOR . 'tests/tmp';
 $compiler = new Magento\ProtoGen\Compiler($templatesPath, $output);
 $compiler->run($codeGeneratorBinaryRequest);
 
-//file_put_contents('/tmp/gg.txt', $codeGeneratorBinaryRequest);
 exit(0);

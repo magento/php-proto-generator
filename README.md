@@ -1,14 +1,14 @@
 # Overview
 
-This project is a `protoc` plugin for Magento specific gRPC code generation.
+This project is a Magento code generator based on proto files provided
 
 # Installation
-* This is a `protoc` plugin, so you need to have `protoc` binary installed and visible in PATH
-* `composer install`
+* Install docker
+* `docker build -t magento/proto-generator:latest .` in project root directory 
 
 # Usage
-Run `protoc --php_out=tests/tmp/ --php-grpc_out=tests/tmp/ --magento_out=tests/tmp/ --plugin=protoc-gen-grpc=grpc_php_plugin --plugin=protoc-gen-magento=protoc-gen-magento -I tests/fixtures tests/fixtures/basic.proto`
+Run `docker run --rm -it -v $(pwd):/build magento/proto-generator:latest /build/tests/fixtures/ /build/tests/tmp`
 
 
 # Testing
-Install composer dev dependencies. Run `php vendor/bin/phpunit`.
+Run `docker run --rm -it -v $(pwd):/build --entrypoint="/app/vendor/bin/phpunit" magento/proto-generator:latest:latest `
