@@ -61,7 +61,12 @@ class Generator extends Command
 
         exec($command, $out, $code);
 
-
-        return 0;
+        if ($code != 0) {
+            throw new \RuntimeException(
+                'Compilation failed with the following message:'
+                . PHP_EOL . implode(PHP_EOL, $out)
+            );
+        }
+        return $code;
     }
 }
