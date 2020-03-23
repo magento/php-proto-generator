@@ -83,9 +83,10 @@ class Skeleton
      */
     private function generateComposer(string $vendor, string $module, string $path): void
     {
+        $name = $this->getModuleName($module);
         $content = $this->composerTemplate->render([
             'module' => [
-                'name' => strtolower($vendor) . '/module-' . strtolower($module),
+                'name' => strtolower($vendor) . '/module-' . $name,
                 'namespace' => $vendor . '\\\\' . $module . '\\\\'
             ],
         ]);
@@ -122,5 +123,18 @@ class Skeleton
             ],
         ]);
         $this->writeFile($content, $path . '/etc', 'module.xml');
+    }
+
+    /**
+     * Converts camel case name to hyphen separated lower case words.
+     *
+     * @param string $value
+     * @return string
+     */
+    private function getModuleName(string $value): string
+    {
+        $pattern = '/(?:^|[A-Z])[a-z]+/';
+        preg_match_all($pattern, $value, $matches);
+        return strtolower(implode('-', $matches[0]));
     }
 }
