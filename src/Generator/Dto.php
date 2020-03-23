@@ -70,7 +70,7 @@ class Dto
     public function run(string $namespace, DescriptorProto $descriptor): array
     {
         $fields = [];
-        $dtoNamespace = $this->fromProto($namespace, 'Data');
+        $dtoNamespace = $this->fromProto($namespace, 'Api\\Data');
 
         /** @var \Google\Protobuf\FieldDescriptorProto $field */
         foreach ($descriptor->getField() as $field) {
@@ -78,7 +78,10 @@ class Dto
             $type = $docType = $this->getType($field);
             // check if a getter method parameter is a simple type
             if ((int) $type === Type::TYPE_MESSAGE) {
-                $type = $docType = $this->fromProto($this->convertProtoNameToFqcn($field->getTypeName()), 'Data') . 'Interface';
+                $type = $docType = $this->fromProto(
+                    $this->convertProtoNameToFqcn($field->getTypeName()),
+                    'Api\\Data')
+                    . 'Interface';
                 // check if message is repeated
                 if ($field->getLabel() === Label::LABEL_REPEATED) {
                     $docType .= '[]';

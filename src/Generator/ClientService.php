@@ -76,7 +76,7 @@ class ClientService
      */
     public function run(string $namespace, ServiceDescriptorProto $descriptorProto, array $filleDescriptorAggr): array
     {
-        $serviceNamespace = str_replace('\Proto', '', $namespace);
+        $serviceNamespace = str_replace('Proto', 'Api', $namespace);
         $protoServiceClass = $namespace . '\\'. $descriptorProto->getName() . 'Client';
 
         $methods = [];
@@ -84,8 +84,8 @@ class ClientService
         foreach ($descriptorProto->getMethod() as $method) {
             $pInput = $this->convertProtoNameToFqcn($method->getInputType());
             $pOutput = $this->convertProtoNameToFqcn($method->getOutputType());
-            $mInput = $this->fromProto($pInput, 'Data');
-            $mOutput = $this->fromProto($pOutput, 'Data');
+            $mInput = $this->fromProto($pInput, 'Api\\Data');
+            $mOutput = $this->fromProto($pOutput, 'Api\\Data');
             $methods[] = [
                 'name' => $method->getName(),
                 'input' => [
@@ -167,11 +167,11 @@ class ClientService
                 if ($field->getLabel() === FieldDescriptorProto\Label::LABEL_REPEATED) {
                     $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
                     $property['array'] = true;
-                    $property[$in] = $this->fromProto($className, 'Data');
+                    $property[$in] = $this->fromProto($className, 'Api\\Data');
                     $property[$out] = $className;
                     // getter returns an object
                 } else {
-                    $property[$in] = $this->fromProto($className, 'Data');
+                    $property[$in] = $this->fromProto($className, 'Api\\Data');
                     $property[$out] = $className;
                     $property['object'] = true;
                     $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
