@@ -16,4 +16,4 @@ You can mount any amount of directories and point input/output to different dire
 
 
 # Testing
-Run `docker run --rm -it -v $(pwd):/build --entrypoint="/app/vendor/bin/phpunit" magento/proto-generator:latest:latest `
+Run `docker run --rm -it -v $(pwd):/build --entrypoint="/app/vendor/bin/phpunit" magento/proto-generator:latest `
