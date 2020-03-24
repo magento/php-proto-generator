@@ -8,10 +8,9 @@
 require __DIR__ . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 
 $codeGeneratorBinaryRequest = file_get_contents('php://stdin');
-//$codeGeneratorBinaryRequest = file_get_contents('/tmp/gg.txt');
 
-$templatesPath = __DIR__ . DIRECTORY_SEPARATOR . 'templates';
-$output = __DIR__ . DIRECTORY_SEPARATOR . 'output';
+$templatesPath = __DIR__  . '/templates';
+$output = __DIR__  . '/tests/tmp';
 
 $compiler = new Magento\ProtoGen\Compiler($templatesPath, $output);
 $compiler->run($codeGeneratorBinaryRequest);

@@ -17,20 +17,14 @@ class ServiceGenerationTest extends TestCase
 {
     private const OUTPUT_PATH = GENERATED . '/Magento/Grpc/';
 
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        exec(
-            'rm -rf ' . dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR  . 'tmp'
-            . '/*'
-        );
+        exec('rm -rf ' . GENERATED . '/*');
     }
 
-    protected function tearDown(): void
+    public static function tearDownAfterClass(): void
     {
-        exec(
-            'rm -rf ' . dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR  . 'tmp'
-            . '/*'
-        );
+        exec('rm -rf ' . GENERATED . '/*');
     }
 
     /**
@@ -40,7 +34,7 @@ class ServiceGenerationTest extends TestCase
     {
         $binary = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'generator packages:generate';
         $in = __DIR__ . DIRECTORY_SEPARATOR . 'fixtures';
-        $out = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR  .'tmp';
+        $out = GENERATED;
         $command = "$binary $in $out";
 
         exec($command, $out, $code);
