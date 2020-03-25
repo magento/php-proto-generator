@@ -55,7 +55,7 @@ class Generator extends Command
             . ' --magento_out=' . $outputDir
             . ' --plugin=protoc-gen-php-grpc=/usr/local/bin/protoc-gen-php-grpc'
             . ' --plugin=protoc-gen-grpc=/usr/local/bin/grpc_php_plugin'
-            . ' --plugin=protoc-gen-magento=/app/protoc-gen-magento'
+            . ' --plugin=protoc-gen-magento=protoc-gen-magento'
             . ' -I ' . $protoDir
             . ' ' . $protos;
 
