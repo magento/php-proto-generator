@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Magento\ProtoGen;
 
 use Google\Protobuf\Compiler\CodeGeneratorRequest;
+use Google\Protobuf\Compiler\CodeGeneratorResponse;
 use Magento\ProtoGen\Generator\Di;
 use Magento\ProtoGen\Generator\ClientService;
 use Magento\ProtoGen\Generator\NamespaceConverter;
@@ -42,17 +43,16 @@ class Compiler
 
     /**
      * @param string $templatesPath
-     * @param string $outputPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    public function __construct(string $templatesPath, string $outputPath)
+    public function __construct(string $templatesPath)
     {
-        $this->dtoGenerator = new Generator\Dto($templatesPath, $outputPath);
-        $this->diGenerator = new Di($templatesPath, $outputPath);
-        $this->skeletonGenerator = new Skeleton($templatesPath, $outputPath);
-        $this->clientServiceGenerator = new ClientService($templatesPath, $outputPath);
+        $this->dtoGenerator = new Generator\Dto($templatesPath);
+        $this->diGenerator = new Di($templatesPath);
+        $this->skeletonGenerator = new Skeleton($templatesPath);
+        $this->clientServiceGenerator = new ClientService($templatesPath);
     }
 
     /**
@@ -67,6 +67,7 @@ class Compiler
         $request = new CodeGeneratorRequest();
         $request->mergeFromString($rawRequest);
         $protoAggregate = [];
+        $files = [];
 
         /** @var \Google\Protobuf\FileDescriptorProto $proto */
         foreach ($request->getProtoFile() as $proto) {
@@ -75,21 +76,34 @@ class Compiler
 
             /** @var \Google\Protobuf\DescriptorProto $descriptor */
             foreach ($proto->getMessageType() as $descriptor) {
-                $preferences[] = $this->dtoGenerator->run($namespace, $descriptor);
+                $result = $this->dtoGenerator->run($namespace, $descriptor);
+                foreach ($result['files'] as $file) {
+                    $files[] = $file;
+                }
+                $preferences[] = $result['preferences'];
             }
 
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */
             foreach ($proto->getService() as $service) {
-                $this->clientServiceGenerator->run($namespace, $service, $protoAggregate);
+                foreach ($this->clientServiceGenerator->run($namespace, $service, $protoAggregate) as $file) {
+                    $files[] = $file;
+                }
             }
         }
 
         $namespaceChunk = explode('\\', $namespace);
         [$vendor, $module] = [$namespaceChunk[0], $namespaceChunk[1]];
-        $this->skeletonGenerator->run($vendor, $module);
+        foreach ($this->skeletonGenerator->run($vendor, $module) as $file) {
+            $files[] = $file;
+        }
 
         // all proto files will be part of the same module
         $path = implode('/', [$vendor, $module]);
-        $this->diGenerator->run($preferences, $path);
+        $files[] = $this->diGenerator->run($preferences, $path);
+
+        $response = new CodeGeneratorResponse();
+        $response->setFile($files);
+        // output all generated files to STDOUT, so protoc can write them by `magento_out` path
+        echo $response->serializeToString();
     }
 }

@@ -49,12 +49,11 @@ class ClientService
 
     /**
      * @param string $templatesPath
-     * @param string $outputPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    public function __construct(string $templatesPath, string $outputPath)
+    public function __construct(string $templatesPath)
     {
         $loader = new FilesystemLoader($templatesPath);
         $twig = new Environment($loader, [
@@ -63,7 +62,6 @@ class ClientService
         $this->interfaceTemplate = $twig->load(self::INTERFACE_TPL);
         $this->serviceTemplate = $twig->load(self::SERVICE_TPL);
         $this->toProtoTemplate = $twig->load(self::TO_PROTO_METHOD_TPL);
-        $this->outputPath = $outputPath;
     }
 
     /**
@@ -74,8 +72,11 @@ class ClientService
      * @param array $filleDescriptorAggr
      * @return array
      */
-    public function run(string $namespace, ServiceDescriptorProto $descriptorProto, array $filleDescriptorAggr): array
-    {
+    public function run(
+        string $namespace,
+        ServiceDescriptorProto $descriptorProto,
+        array $filleDescriptorAggr
+    ): \Generator {
         $serviceNamespace = str_replace('Proto', 'Api', $namespace);
         $protoServiceClass = $namespace . '\\'. $descriptorProto->getName() . 'Client';
 
@@ -112,7 +113,7 @@ class ClientService
         ]);
 
         $path = $this->convertToDirName($serviceNamespace);
-        $this->writeFile($content, $path, $interfaceName . '.php');
+        yield $this->createFile($path . '/' . $interfaceName . '.php', $content);
 
         $content = $this->serviceTemplate->render([
             'namespace' => $serviceNamespace,
@@ -123,12 +124,7 @@ class ClientService
                 'class' => '\\' . $protoServiceClass,
             ],
         ]);
-        $this->writeFile($content, $path, $descriptorProto->getName() . '.php');
-
-        return [
-            'interface' => $serviceNamespace . '\\' . $interfaceName,
-            'class' => $serviceNamespace . '\\' . $descriptorProto->getName()
-        ];
+        yield $this->createFile($path . '/' . $descriptorProto->getName() . '.php', $content);
     }
 
     /**

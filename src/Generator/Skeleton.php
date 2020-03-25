@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace Magento\ProtoGen\Generator;
 
+use Google\Protobuf\Compiler\CodeGeneratorResponse\File;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TemplateWrapper;
@@ -41,14 +42,12 @@ class Skeleton
 
     /**
      * @param string $templatesPath
-     * @param string $outputPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    public function __construct(string $templatesPath, string $outputPath)
+    public function __construct(string $templatesPath)
     {
-        $this->outputPath = $outputPath;
         $loader = new FilesystemLoader($templatesPath);
         $twig = new Environment($loader, [
             'cache' => false
@@ -64,14 +63,15 @@ class Skeleton
      *
      * @param string $vendor
      * @param string $module
+     * @return File[]
      */
-    public function run(string $vendor, string $module): void
+    public function run(string $vendor, string $module): \Generator
     {
         $path = $vendor . '/' . $module;
         $moduleName = $vendor . '_' . $module;
-        $this->generateComposer($vendor, $module, $path);
-        $this->generateRegistration($moduleName, $path);
-        $this->generateModuleXml($moduleName, $path);
+        yield $this->generateComposer($vendor, $module, $path);
+        yield $this->generateRegistration($moduleName, $path);
+        yield $this->generateModuleXml($moduleName, $path);
     }
 
     /**
@@ -80,8 +80,9 @@ class Skeleton
      * @param string $vendor
      * @param string $module
      * @param string $path
+     * @return File
      */
-    private function generateComposer(string $vendor, string $module, string $path): void
+    private function generateComposer(string $vendor, string $module, string $path): File
     {
         $name = $this->getModuleName($module);
         $content = $this->composerTemplate->render([
@@ -90,7 +91,7 @@ class Skeleton
                 'namespace' => $vendor . '\\\\' . $module . '\\\\'
             ],
         ]);
-        $this->writeFile($content, $path, 'composer.json');
+        return $this->createFile($path . '/composer.json', $content);
     }
 
     /**
@@ -98,15 +99,16 @@ class Skeleton
      *
      * @param string $moduleName
      * @param string $path
+     * @return File
      */
-    private function generateRegistration(string $moduleName, string $path): void
+    private function generateRegistration(string $moduleName, string $path): File
     {
         $content = $this->registrationTemplate->render([
             'module' => [
                 'name' => $moduleName
             ],
         ]);
-        $this->writeFile($content, $path, 'registration.php');
+        return $this->createFile($path . '/registration.php', $content);
     }
 
     /**
@@ -114,15 +116,16 @@ class Skeleton
      *
      * @param string $moduleName
      * @param string $path
+     * @return File
      */
-    private function generateModuleXml(string $moduleName, string $path): void
+    private function generateModuleXml(string $moduleName, string $path): File
     {
         $content = $this->moduleXmlTemplate->render([
             'module' => [
                 'name' => $moduleName
             ],
         ]);
-        $this->writeFile($content, $path . '/etc', 'module.xml');
+        return $this->createFile($path . '/etc/module.xml', $content);
     }
 
     /**
