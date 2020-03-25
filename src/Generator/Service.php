@@ -18,7 +18,7 @@ use Twig\TemplateWrapper;
 /**
  * Generates gRPC service interfaces and classes.
  */
-class ClientService
+class Service
 {
     use FileWriter;
 
@@ -105,26 +105,33 @@ class ClientService
             ];
         }
 
-        $interfaceName = $descriptorProto->getName() . 'Interface';
-        $content = $this->interfaceTemplate->render([
-            'namespace' => $serviceNamespace,
-            'name' => $interfaceName,
-            'methods' => $methods
-        ]);
+        yield $this->generateServiceInterface(
+            $descriptorProto->getName() . 'Interface',
+            $serviceNamespace,
+            $methods
+        );
 
-        $path = $this->convertToDirName($serviceNamespace);
-        yield $this->createFile($path . '/' . $interfaceName . '.php', $content);
+        yield $this->generateServiceInterface(
+            $descriptorProto->getName() . 'ServerInterface',
+            $serviceNamespace,
+            $methods
+        );
 
-        $content = $this->serviceTemplate->render([
-            'namespace' => $serviceNamespace,
-            'interface' => $interfaceName,
-            'name' => $descriptorProto->getName(),
-            'methods' => $methods,
-            'proto' => [
-                'class' => '\\' . $protoServiceClass,
-            ],
-        ]);
-        yield $this->createFile($path . '/' . $descriptorProto->getName() . '.php', $content);
+        $content = $this->serviceTemplate->render(
+            [
+                'namespace' => $serviceNamespace,
+                'interface' => $descriptorProto->getName() . 'Interface',
+                'name' => $descriptorProto->getName(),
+                'methods' => $methods,
+                'proto' => [
+                    'class' => '\\' . $protoServiceClass,
+                ],
+            ]
+        );
+        yield $this->createFile(
+            $this->convertToDirName($serviceNamespace) . '/' . $descriptorProto->getName() . '.php',
+            $content
+        );
     }
 
     /**
@@ -264,5 +271,27 @@ class ClientService
         }
 
         return null;
+    }
+
+    /**
+     * @param string $interfaceName
+     * @param string $namespace
+     * @param array $methods
+     * @return \Google\Protobuf\Compiler\CodeGeneratorResponse\File
+     */
+    private function generateServiceInterface(
+        string $interfaceName,
+        string $namespace,
+        array $methods
+    ) {
+        $content = $this->interfaceTemplate->render(
+            [
+                'namespace' => $namespace,
+                'name' => $interfaceName,
+                'methods' => $methods
+            ]
+        );
+        $path = $this->convertToDirName($namespace);
+        return $this->createFile($path . '/' . $interfaceName . '.php', $content);
     }
 }
