@@ -8,7 +8,6 @@ declare(strict_types=1);
 namespace Magento\ProtoGen\Generator;
 
 use Google\Protobuf\DescriptorProto;
-use Google\Protobuf\FieldDescriptorProto;
 use Google\Protobuf\FieldDescriptorProto\Label;
 use Google\Protobuf\FieldDescriptorProto\Type;
 use Twig\Environment;
@@ -44,12 +43,11 @@ class Dto
 
     /**
      * @param string $templatesPath
-     * @param string $outputPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    public function __construct(string $templatesPath, string $outputPath)
+    public function __construct(string $templatesPath)
     {
         $loader = new FilesystemLoader($templatesPath);
         $twig = new Environment($loader, [
@@ -57,7 +55,6 @@ class Dto
         ]);
         $this->classTemplate = $twig->load(self::CLASS_TPL);
         $this->interfaceTemplate = $twig->load(self::INTERFACE_TPL);
-        $this->outputPath = $outputPath;
     }
 
     /**
@@ -65,11 +62,12 @@ class Dto
      *
      * @param string $namespace
      * @param DescriptorProto $descriptor
-     * @return array `['interface' => FQCN, 'class' => FQCN]`
+     * @return array `['files' => File[], 'preferences' => ['interface' => FQCN, 'class' => FQCN]]`
      */
     public function run(string $namespace, DescriptorProto $descriptor): array
     {
         $fields = [];
+        $files = [];
         $dtoNamespace = $this->fromProto($namespace, 'Api\\Data');
 
         /** @var \Google\Protobuf\FieldDescriptorProto $field */
@@ -79,8 +77,8 @@ class Dto
             // check if a getter method parameter is a simple type
             if ((int) $type === Type::TYPE_MESSAGE) {
                 $type = $docType = $this->fromProto(
-                    $this->convertProtoNameToFqcn($field->getTypeName()),
-                    'Api\\Data')
+                        $this->convertProtoNameToFqcn($field->getTypeName()),
+                        'Api\\Data')
                     . 'Interface';
                 // check if message is repeated
                 if ($field->getLabel() === Label::LABEL_REPEATED) {
@@ -105,18 +103,21 @@ class Dto
             'fields' => $fields
         ]);
         $path = $this->convertToDirName($dtoNamespace);
-        $this->writeFile($content, $path, $descriptor->getName() . '.php');
+        $files[] = $this->createFile($path . '/' . $descriptor->getName() . '.php', $content);
 
         $content = $this->interfaceTemplate->render([
             'namespace' => $dtoNamespace,
             'class' => $descriptor->getName(),
             'fields' => $fields
         ]);
-        $this->writeFile($content, $path, $descriptor->getName() . 'Interface.php');
+        $files[] = $this->createFile($path . '/' . $descriptor->getName() . 'Interface.php', $content);
 
         return [
-            'interface' => $dtoNamespace . '\\' . $descriptor->getName() . 'Interface',
-            'class' => $dtoNamespace . '\\' . $descriptor->getName(),
+            'files' => $files,
+            'preferences' => [
+                'interface' => $dtoNamespace . '\\' . $descriptor->getName() . 'Interface',
+                'class' => $dtoNamespace . '\\' . $descriptor->getName(),
+            ],
         ];
     }
 }

@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace Magento\ProtoGen\Generator;
 
+use Google\Protobuf\Compiler\CodeGeneratorResponse\File;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TemplateWrapper;
@@ -27,31 +28,30 @@ class Di
 
     /**
      * @param string $templatesPath
-     * @param string $outputPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    public function __construct(string $templatesPath, string $outputPath)
+    public function __construct(string $templatesPath)
     {
         $loader = new FilesystemLoader($templatesPath);
         $twig = new Environment($loader, [
             'cache' => false
         ]);
         $this->diTemplate = $twig->load(self::DI_TPL);
-        $this->outputPath = $outputPath;
     }
 
     /**
      * Generates di.xml based on provided list of preferences.
      *
      * @param array $preferences `['interface' => FQCN, `class` => FQCN]`
+     * @return File
      */
-    public function run(array $preferences, string $path): void
+    public function run(array $preferences, string $path): File
     {
         $content = $this->diTemplate->render([
             'preferences' => $preferences,
         ]);
-        $this->writeFile($content, $path . '/etc', 'di.xml');
+        return $this->createFile($path . '/etc/di.xml', $content);
     }
 }
