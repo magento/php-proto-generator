@@ -10,7 +10,7 @@ namespace Magento\ProtoGen;
 use Google\Protobuf\Compiler\CodeGeneratorRequest;
 use Google\Protobuf\Compiler\CodeGeneratorResponse;
 use Magento\ProtoGen\Generator\Di;
-use Magento\ProtoGen\Generator\ClientService;
+use Magento\ProtoGen\Generator\Service as ServiceGenerator;
 use Magento\ProtoGen\Generator\NamespaceConverter;
 use Magento\ProtoGen\Generator\Skeleton;
 
@@ -37,7 +37,7 @@ class Compiler
     private $skeletonGenerator;
 
     /**
-     * @var ClientService
+     * @var ServiceGenerator
      */
     private $clientServiceGenerator;
 
@@ -52,7 +52,7 @@ class Compiler
         $this->dtoGenerator = new Generator\Dto($templatesPath);
         $this->diGenerator = new Di($templatesPath);
         $this->skeletonGenerator = new Skeleton($templatesPath);
-        $this->clientServiceGenerator = new ClientService($templatesPath);
+        $this->clientServiceGenerator = new ServiceGenerator($templatesPath);
     }
 
     /**

@@ -18,7 +18,7 @@ use Twig\TemplateWrapper;
 /**
  * Generates gRPC service interfaces and classes.
  */
-class ClientService
+class Service
 {
     use FileWriter;
 
@@ -29,6 +29,8 @@ class ClientService
     private const INTERFACE_TPL = 'serviceInterface.tpl';
 
     private const SERVICE_TPL = 'clientService.tpl';
+
+    private const SERVER_PROXY_TPL = 'serverProxy.tpl';
 
     private const TO_PROTO_METHOD_TPL = 'toProtoConverter.tpl';
 
@@ -45,6 +47,11 @@ class ClientService
     /**
      * @var TemplateWrapper
      */
+    private $serverProxyTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
     private $toProtoTemplate;
 
     /**
@@ -56,11 +63,10 @@ class ClientService
     public function __construct(string $templatesPath)
     {
         $loader = new FilesystemLoader($templatesPath);
-        $twig = new Environment($loader, [
-            'cache' => false,
-        ]);
+        $twig = new Environment($loader, ['cache' => false]);
         $this->interfaceTemplate = $twig->load(self::INTERFACE_TPL);
         $this->serviceTemplate = $twig->load(self::SERVICE_TPL);
+        $this->serverProxyTemplate = $twig->load(self::SERVER_PROXY_TPL);
         $this->toProtoTemplate = $twig->load(self::TO_PROTO_METHOD_TPL);
     }
 
@@ -78,7 +84,7 @@ class ClientService
         array $filleDescriptorAggr
     ): \Generator {
         $serviceNamespace = str_replace('Proto', 'Api', $namespace);
-        $protoServiceClass = $namespace . '\\'. $descriptorProto->getName() . 'Client';
+        $protoServiceClass = $namespace . '\\' . $descriptorProto->getName() . 'Client';
 
         $methods = [];
         /** @var \Google\Protobuf\MethodDescriptorProto $method */
@@ -91,12 +97,14 @@ class ClientService
                 'name' => $method->getName(),
                 'input' => [
                     'interface' => $mInput . 'Interface',
-                    'content' => $this->getRequestDtoContent($mInput, $pInput, $filleDescriptorAggr),
+                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent($mInput, $pInput, $filleDescriptorAggr),
+                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent($mInput, $pInput, $filleDescriptorAggr),
                 ],
                 'output' => [
                     'class' => $mOutput,
                     'interface' => $mOutput . 'Interface',
-                    'content' => $this->getResponseDtoContent($mOutput, $pOutput, $filleDescriptorAggr),
+                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent($mOutput, $pOutput, $filleDescriptorAggr),
+                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent($mOutput, $pOutput, $filleDescriptorAggr),
                 ],
                 'proto' => [
                     'input' => $pInput,
@@ -105,26 +113,47 @@ class ClientService
             ];
         }
 
-        $interfaceName = $descriptorProto->getName() . 'Interface';
-        $content = $this->interfaceTemplate->render([
-            'namespace' => $serviceNamespace,
-            'name' => $interfaceName,
-            'methods' => $methods
-        ]);
+        yield $this->generateServiceInterface(
+            $descriptorProto->getName() . 'Interface',
+            $serviceNamespace,
+            $methods
+        );
 
-        $path = $this->convertToDirName($serviceNamespace);
-        yield $this->createFile($path . '/' . $interfaceName . '.php', $content);
+        yield $this->generateServiceInterface(
+            $descriptorProto->getName() . 'ServerInterface',
+            $serviceNamespace,
+            $methods
+        );
 
-        $content = $this->serviceTemplate->render([
-            'namespace' => $serviceNamespace,
-            'interface' => $interfaceName,
-            'name' => $descriptorProto->getName(),
-            'methods' => $methods,
-            'proto' => [
-                'class' => '\\' . $protoServiceClass,
-            ],
-        ]);
-        yield $this->createFile($path . '/' . $descriptorProto->getName() . '.php', $content);
+        $content = $this->serviceTemplate->render(
+            [
+                'namespace' => $serviceNamespace,
+                'interface' => $descriptorProto->getName() . 'Interface',
+                'name' => $descriptorProto->getName(),
+                'methods' => $methods,
+                'proto' => [
+                    'class' => '\\' . $protoServiceClass,
+                ]
+            ]
+        );
+        yield $this->createFile(
+            $this->convertToDirName($serviceNamespace) . '/' . $descriptorProto->getName() . '.php',
+            $content
+        );
+
+        $content = $this->serverProxyTemplate->render(
+            [
+                'namespace' => $serviceNamespace,
+                'interface' => '\\' . $namespace . '\\' . $descriptorProto->getName() . 'Interface',
+                'name' => $descriptorProto->getName() . 'ProxyServer',
+                'methods' => $methods,
+                'serverInterface' => $descriptorProto->getName() . 'ServerInterface'
+            ]
+        );
+        yield $this->createFile(
+            $this->convertToDirName($serviceNamespace) . '/' . $descriptorProto->getName() . 'ProxyServer' . '.php',
+            $content
+        );
     }
 
     /**
@@ -157,20 +186,17 @@ class ClientService
                 'array' => false,
                 'object' => false
             ];
-            if ((int) $type === Type::TYPE_MESSAGE) {
+            if ((int)$type === Type::TYPE_MESSAGE) {
                 $className = $this->convertProtoNameToFqcn($field->getTypeName());
                 // getter returns array of objects
+                $property[$in] = $this->fromProto($className, 'Api\\Data');
+                $property[$out] = $className;
+                $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
                 if ($field->getLabel() === FieldDescriptorProto\Label::LABEL_REPEATED) {
-                    $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
                     $property['array'] = true;
-                    $property[$in] = $this->fromProto($className, 'Api\\Data');
-                    $property[$out] = $className;
                     // getter returns an object
                 } else {
-                    $property[$in] = $this->fromProto($className, 'Api\\Data');
-                    $property[$out] = $className;
                     $property['object'] = true;
-                    $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
                 }
             }
             $props[] = $property;
@@ -187,7 +213,7 @@ class ClientService
      * @param array $fileDescriptorAggregate
      * @return string
      */
-    private function getRequestDtoContent(
+    private function getMagentoToProtoDtoConverterContent(
         string $fqcn,
         string $proto,
         array $fileDescriptorAggregate
@@ -205,7 +231,7 @@ class ClientService
      * @param array $fileDescriptorAggregate
      * @return string
      */
-    private function getResponseDtoContent(
+    private function getProtoToMagentoDtoConverterContent(
         string $fqcn,
         string $proto,
         array $fileDescriptorAggregate
@@ -264,5 +290,27 @@ class ClientService
         }
 
         return null;
+    }
+
+    /**
+     * @param string $interfaceName
+     * @param string $namespace
+     * @param array $methods
+     * @return \Google\Protobuf\Compiler\CodeGeneratorResponse\File
+     */
+    private function generateServiceInterface(
+        string $interfaceName,
+        string $namespace,
+        array $methods
+    ) {
+        $content = $this->interfaceTemplate->render(
+            [
+                'namespace' => $namespace,
+                'name' => $interfaceName,
+                'methods' => $methods
+            ]
+        );
+        $path = $this->convertToDirName($namespace);
+        return $this->createFile($path . '/' . $interfaceName . '.php', $content);
     }
 }
