@@ -3,3 +3,4 @@
 /output
 /tests/tmp
 .phpunit.result.cache
+.php_cs.cache

@@ -67,6 +67,10 @@ class Generator extends Command
                 . PHP_EOL . implode(PHP_EOL, $out)
             );
         }
+
+        $command = 'vendor/bin/php-cs-fixer fix ' . $outputDir;
+        exec($command, $out, $code);
+
         return $code;
     }
 }
