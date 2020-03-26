@@ -31,14 +31,14 @@ class {{ name }} implements {{ interface }}
 
     private function {{ method.name }}ToProto({{ method.input.interface }} $value): {{ method.proto.input}}
     {
-        {{ method.input.content|raw }}
+        {{ method.input.toProtoContent|raw }}
 
         return $proto;
     }
 
     private function {{ method.name }}FromProto({{ method.proto.output }} $value): {{ method.output.interface }}
     {
-        {{ method.output.content|raw }}
+        {{ method.output.fromProtoContent|raw }}
 
         return $out;
     }
