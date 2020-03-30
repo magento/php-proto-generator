@@ -9,7 +9,8 @@
     "friendsofphp/php-cs-fixer": "^2.16"
   },
   "require-dev": {
-    "phpunit/phpunit": "^8.5"
+    "phpunit/phpunit": "^8.5",
+    "spiral/php-grpc": "^1.2"
   },
   "autoload": {
     "psr-4": {

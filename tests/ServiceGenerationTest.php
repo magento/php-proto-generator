@@ -80,6 +80,77 @@ class ServiceGenerationTest extends TestCase
     }
 
     /**
+     * @depends testGeneration
+     */
+    public function testServerInterfaceGeneration(): void
+    {
+        $path = self::OUTPUT_PATH . 'Api/GreetingServiceServerInterface.php';
+        self::assertFileIsReadable($path);
+        $class = new \ReflectionClass(\Magento\Grpc\Api\GreetingServiceServerInterface::class);
+
+        $method = $class->getMethod('greet');
+        self::assertInstanceOf(\ReflectionMethod::class, $method);
+
+        self::assertEquals(
+            \Magento\Grpc\Api\Data\GreetingRequestInterface::class,
+            $method->getParameters()[0]->getType()
+        );
+        self::assertEquals(
+            \Magento\Grpc\Api\Data\GreetingResponseInterface::class,
+            $method->getReturnType()->getName()
+        );
+    }
+
+    /**
+     * @depends testGeneration
+     */
+    public function testInMemoryServiceGeneration(): void
+    {
+        $path = self::OUTPUT_PATH . 'Api/InMemoryGreetingService.php';
+        self::assertFileIsReadable($path);
+        $class = new \ReflectionClass(\Magento\Grpc\Api\InMemoryGreetingService::class);
+
+        self::assertArrayHasKey(
+            \Magento\Grpc\Api\GreetingServiceInterface::class,
+            array_flip($class->getInterfaceNames())
+        );
+
+        $method = $class->getMethod('greet');
+        self::assertInstanceOf(\ReflectionMethod::class, $method);
+
+        self::assertEquals(
+            \Magento\Grpc\Api\Data\GreetingRequestInterface::class,
+            $method->getParameters()[0]->getType()
+        );
+        self::assertEquals(
+            \Magento\Grpc\Api\Data\GreetingResponseInterface::class,
+            $method->getReturnType()->getName()
+        );
+    }
+
+    /**
+     * @depends testGeneration
+     */
+    public function testProxyServerGeneration(): void
+    {
+        $path = self::OUTPUT_PATH . 'Api/GreetingServiceProxyServer.php';
+        self::assertFileIsReadable($path);
+        $class = new \ReflectionClass(\Magento\Grpc\Api\GreetingServiceProxyServer::class);
+
+        self::assertArrayHasKey(
+            \Magento\Grpc\Proto\GreetingServiceInterface::class,
+            array_flip($class->getInterfaceNames())
+        );
+
+        $method = $class->getMethod('greet');
+        self::assertInstanceOf(\ReflectionMethod::class, $method);
+
+        self::assertEquals(\Spiral\GRPC\ContextInterface::class, $method->getParameters()[0]->getType());
+        self::assertEquals(\Magento\Grpc\Proto\GreetingRequest::class, $method->getParameters()[1]->getType());
+        self::assertEquals(\Magento\Grpc\Proto\GreetingResponse::class, $method->getReturnType()->getName());
+    }
+
+    /**
      * Checks if generated DTOs methods have correct arguments and return types.
      *
      * @depends testGrpcServiceInterface
