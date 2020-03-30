@@ -23,8 +23,10 @@ class {{ name }} implements {{ interface }}
     public function {{ method.name }}({{ method.input.interface }} $request): {{ method.output.interface }}
     {
         $protoRequest = $this->{{ method.name }}ToProto($request);
-        // @TODO add error handling
-        [$protoResult, $status] = $this->protoClient->{{ method.name }}($protoRequest);
+        [$protoResult, $status] = $this->protoClient->{{ method.name }}($protoRequest)->wait();
+        if ($status->code !== 0) {
+            throw new \RuntimeException($status->details, $status->code);
+        }
         $result = $this->{{ method.name }}FromProto($protoResult);
         return $result;
     }

@@ -74,21 +74,25 @@ class Dto
         foreach ($descriptor->getField() as $field) {
             $name = str_replace('_', '', ucwords($field->getName(), '_'));
             $type = $docType = $this->getType($field);
+            $isSimple = true;
             // check if a getter method parameter is a simple type
             if ((int) $type === Type::TYPE_MESSAGE) {
                 $type = $docType = $this->fromProto(
                         $this->convertProtoNameToFqcn($field->getTypeName()),
                         'Api\\Data')
                     . 'Interface';
+                $isSimple = false;
                 // check if message is repeated
                 if ($field->getLabel() === Label::LABEL_REPEATED) {
                     $docType .= '[]';
                     $type = 'array';
+                    $isSimple = true;
                 }
             }
             $fields[] = [
                 'name' => $name,
                 'type' => $type,
+                'simple' => $isSimple,
                 'propertyName' => lcfirst($name),
                 'doc' => [
                     'input' => $docType,

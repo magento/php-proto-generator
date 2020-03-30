@@ -18,13 +18,23 @@ final class {{ class }} implements {{ class }}Interface
 
 {% for field in fields %}
 
+    {% if field.simple %}
     /**
      * @return {{ field.doc.output }}
      */
     public function get{{ field.name }}(): {{ field.type }}
     {
+         return ({{ field.type }}) $this->{{ field.propertyName }};
+    }
+    {% else %}
+    /**
+     * @return {{ field.doc.output }}|null
+     */
+    public function get{{ field.name }}(): ?{{ field.type }}
+    {
         return $this->{{ field.propertyName }};
     }
+    {% endif %}
 
     /**
      * @param {{ field.doc.input }} $value
