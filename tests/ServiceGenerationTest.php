@@ -12,6 +12,13 @@ use Magento\Grpc\Api\Data\GreetingRequestInterface;
 use Magento\Grpc\Api\Data\GreetingResponseInterface;
 use Magento\Grpc\Api\GreetingServiceInterface;
 use PHPUnit\Framework\TestCase;
+use Magento\Grpc\Api\GreetingServiceProxyServer;
+use Magento\Grpc\Proto\GreetingResponse as ProtoGreetingResponse;
+use Magento\Grpc\Proto\GreetingRequest as ProtoGreetingRequest;
+use Spiral\GRPC\ContextInterface as GrpcContextInterface;
+use Magento\Grpc\Proto\GreetingServiceInterface as ProtoGreetingServiceInterface;
+use Magento\Grpc\Api\InMemoryGreetingService;
+use Magento\Grpc\Api\GreetingServiceServerInterface;
 
 class ServiceGenerationTest extends TestCase
 {
@@ -86,17 +93,17 @@ class ServiceGenerationTest extends TestCase
     {
         $path = self::OUTPUT_PATH . 'Api/GreetingServiceServerInterface.php';
         self::assertFileIsReadable($path);
-        $class = new \ReflectionClass(\Magento\Grpc\Api\GreetingServiceServerInterface::class);
+        $class = new \ReflectionClass(GreetingServiceServerInterface::class);
 
         $method = $class->getMethod('greet');
         self::assertInstanceOf(\ReflectionMethod::class, $method);
 
         self::assertEquals(
-            \Magento\Grpc\Api\Data\GreetingRequestInterface::class,
+            GreetingRequestInterface::class,
             $method->getParameters()[0]->getType()
         );
         self::assertEquals(
-            \Magento\Grpc\Api\Data\GreetingResponseInterface::class,
+            GreetingResponseInterface::class,
             $method->getReturnType()->getName()
         );
     }
@@ -108,10 +115,10 @@ class ServiceGenerationTest extends TestCase
     {
         $path = self::OUTPUT_PATH . 'Api/InMemoryGreetingService.php';
         self::assertFileIsReadable($path);
-        $class = new \ReflectionClass(\Magento\Grpc\Api\InMemoryGreetingService::class);
+        $class = new \ReflectionClass(InMemoryGreetingService::class);
 
         self::assertArrayHasKey(
-            \Magento\Grpc\Api\GreetingServiceInterface::class,
+            GreetingServiceInterface::class,
             array_flip($class->getInterfaceNames())
         );
 
@@ -119,11 +126,11 @@ class ServiceGenerationTest extends TestCase
         self::assertInstanceOf(\ReflectionMethod::class, $method);
 
         self::assertEquals(
-            \Magento\Grpc\Api\Data\GreetingRequestInterface::class,
+            GreetingRequestInterface::class,
             $method->getParameters()[0]->getType()
         );
         self::assertEquals(
-            \Magento\Grpc\Api\Data\GreetingResponseInterface::class,
+            GreetingResponseInterface::class,
             $method->getReturnType()->getName()
         );
     }
@@ -135,19 +142,19 @@ class ServiceGenerationTest extends TestCase
     {
         $path = self::OUTPUT_PATH . 'Api/GreetingServiceProxyServer.php';
         self::assertFileIsReadable($path);
-        $class = new \ReflectionClass(\Magento\Grpc\Api\GreetingServiceProxyServer::class);
+        $class = new \ReflectionClass(GreetingServiceProxyServer::class);
 
         self::assertArrayHasKey(
-            \Magento\Grpc\Proto\GreetingServiceInterface::class,
+            ProtoGreetingServiceInterface::class,
             array_flip($class->getInterfaceNames())
         );
 
         $method = $class->getMethod('greet');
         self::assertInstanceOf(\ReflectionMethod::class, $method);
 
-        self::assertEquals(\Spiral\GRPC\ContextInterface::class, $method->getParameters()[0]->getType());
-        self::assertEquals(\Magento\Grpc\Proto\GreetingRequest::class, $method->getParameters()[1]->getType());
-        self::assertEquals(\Magento\Grpc\Proto\GreetingResponse::class, $method->getReturnType()->getName());
+        self::assertEquals(GrpcContextInterface::class, $method->getParameters()[0]->getType());
+        self::assertEquals(ProtoGreetingRequest::class, $method->getParameters()[1]->getType());
+        self::assertEquals(ProtoGreetingResponse::class, $method->getReturnType()->getName());
     }
 
     /**
