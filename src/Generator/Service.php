@@ -30,6 +30,8 @@ class Service
 
     private const SERVICE_TPL = 'clientService.tpl';
 
+    private const IN_MEMORY_SERVICE_TPL = 'inMemoryClientService.tpl';
+
     private const SERVER_PROXY_TPL = 'serverProxy.tpl';
 
     private const TO_PROTO_METHOD_TPL = 'toProtoConverter.tpl';
@@ -43,6 +45,11 @@ class Service
      * @var TemplateWrapper
      */
     private $serviceTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
+    private $inMemoryServiceTemplate;
 
     /**
      * @var TemplateWrapper
@@ -66,6 +73,7 @@ class Service
         $twig = new Environment($loader, ['cache' => false]);
         $this->interfaceTemplate = $twig->load(self::INTERFACE_TPL);
         $this->serviceTemplate = $twig->load(self::SERVICE_TPL);
+        $this->inMemoryServiceTemplate = $twig->load(self::IN_MEMORY_SERVICE_TPL);
         $this->serverProxyTemplate = $twig->load(self::SERVER_PROXY_TPL);
         $this->toProtoTemplate = $twig->load(self::TO_PROTO_METHOD_TPL);
     }
@@ -97,14 +105,30 @@ class Service
                 'name' => $method->getName(),
                 'input' => [
                     'interface' => $mInput . 'Interface',
-                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent($mInput, $pInput, $filleDescriptorAggr),
-                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent($mInput, $pInput, $filleDescriptorAggr),
+                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent(
+                        $mInput,
+                        $pInput,
+                        $filleDescriptorAggr
+                    ),
+                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent(
+                        $mInput,
+                        $pInput,
+                        $filleDescriptorAggr
+                    ),
                 ],
                 'output' => [
                     'class' => $mOutput,
                     'interface' => $mOutput . 'Interface',
-                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent($mOutput, $pOutput, $filleDescriptorAggr),
-                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent($mOutput, $pOutput, $filleDescriptorAggr),
+                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent(
+                        $mOutput,
+                        $pOutput,
+                        $filleDescriptorAggr
+                    ),
+                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent(
+                        $mOutput,
+                        $pOutput,
+                        $filleDescriptorAggr
+                    ),
                 ],
                 'proto' => [
                     'input' => $pInput,
@@ -138,6 +162,20 @@ class Service
         );
         yield $this->createFile(
             $this->convertToDirName($serviceNamespace) . '/' . $descriptorProto->getName() . '.php',
+            $content
+        );
+
+        $content = $this->inMemoryServiceTemplate->render(
+            [
+                'namespace' => $serviceNamespace,
+                'interface' => $descriptorProto->getName() . 'Interface',
+                'name' => 'InMemory' . $descriptorProto->getName(),
+                'methods' => $methods,
+                'serverInterface' => $descriptorProto->getName() . 'ServerInterface'
+            ]
+        );
+        yield $this->createFile(
+            $this->convertToDirName($serviceNamespace) . '/' . 'InMemory' . $descriptorProto->getName() . '.php',
             $content
         );
 
