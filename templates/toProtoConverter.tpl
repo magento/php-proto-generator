@@ -9,8 +9,10 @@
 {% if prop.object %}
         {% set var_name = 'prop' ~ i %}
         ${{ var_name }} = ${{ in_var }}->get{{ prop.name }}();
-        {{ _self.property_tree(prop.in_type, var_name, prop.out_type, out_var, prop.props, i) }}
-        $r->set{{ prop.name }}(${{ out_var}});
+        if (${{ var_name }} !== null) {
+            {{ _self.property_tree(prop.in_type, var_name, prop.out_type, out_var, prop.props, i) }}
+            $r->set{{ prop.name }}(${{ out_var}});
+        }
 
 {% elseif prop.array %}
         $res = [];
