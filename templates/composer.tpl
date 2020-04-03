@@ -7,7 +7,8 @@
     "require": {
         "php": "~7.1.3||~7.2.0||~7.3.0",
         "magento/framework": "*",
-        "google/protobuf": "^3.11"
+        "google/protobuf": "^3.11",
+        "grpc/grpc": "^1.27"
     },
     "type": "magento2-module",
     "license": [
