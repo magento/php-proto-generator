@@ -10,6 +10,7 @@ namespace Magento\ProtoGen;
 use Google\Protobuf\Compiler\CodeGeneratorRequest;
 use Google\Protobuf\Compiler\CodeGeneratorResponse;
 use Magento\ProtoGen\Generator\Di;
+use Magento\ProtoGen\Generator\Metadata;
 use Magento\ProtoGen\Generator\Service as ServiceGenerator;
 use Magento\ProtoGen\Generator\NamespaceConverter;
 use Magento\ProtoGen\Generator\Skeleton;
@@ -42,6 +43,11 @@ class Compiler
     private $clientServiceGenerator;
 
     /**
+     * @var Metadata
+     */
+    private $metadataGenerator;
+
+    /**
      * @param string $templatesPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
@@ -53,10 +59,11 @@ class Compiler
         $this->diGenerator = new Di($templatesPath);
         $this->skeletonGenerator = new Skeleton($templatesPath);
         $this->clientServiceGenerator = new ServiceGenerator($templatesPath);
+        $this->metadataGenerator = new Metadata($templatesPath);
     }
 
     /**
-     * Generate module files.
+     * Generates module files.
      *
      * @param $rawRequest
      * @throws \Exception
@@ -96,6 +103,8 @@ class Compiler
         foreach ($this->skeletonGenerator->run($vendor, $module) as $file) {
             $files[] = $file;
         }
+
+        $files[] = $this->metadataGenerator->run($namespace);
 
         // all proto files will be part of the same module
         $path = implode('/', [$vendor, $module]);
