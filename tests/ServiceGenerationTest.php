@@ -168,6 +168,9 @@ class ServiceGenerationTest extends TestCase
         $getFieldsMethod = $class->getMethod('getFields');
         self::assertEquals('array', $getFieldsMethod->getReturnType()->getName());
 
+        $repeatedScalarGetter = $class->getMethod('getStringArray');
+        self::assertEquals('array', $repeatedScalarGetter->getReturnType()->getName());
+
         $docBlock = $getFieldsMethod->getDocComment();
         self::assertStringContainsString('@return \Magento\Grpc\Api\Data\RepeatedFieldsInterface[]', $docBlock);
     }

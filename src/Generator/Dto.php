@@ -82,13 +82,16 @@ class Dto
                         'Api\\Data')
                     . 'Interface';
                 $isSimple = false;
-                // check if message is repeated
-                if ($field->getLabel() === Label::LABEL_REPEATED) {
-                    $docType .= '[]';
-                    $type = 'array';
-                    $isSimple = true;
-                }
+
             }
+
+            // check if message is repeated
+            if ($field->getLabel() === Label::LABEL_REPEATED) {
+                $docType .= '[]';
+                $type = 'array';
+                $isSimple = true;
+            }
+
             $fields[] = [
                 'name' => $name,
                 'type' => $type,

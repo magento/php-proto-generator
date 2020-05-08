@@ -19,6 +19,7 @@ message GreetingRequest {
     int32 number = 2;
     SubRequest additional_data = 3;
     repeated RepeatedFields fields = 4;
+    repeated string string_array = 5;
 }
 
 message SubResponse {
