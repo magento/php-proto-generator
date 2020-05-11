@@ -13,7 +13,10 @@ namespace {{ namespace }};
 interface {{ name }}
 {
 {% for method in methods %}
-
+    /**
+     * @param {{ method.input.interface }} $request
+     * @return {{ method.output.interface }}
+     */
     public function {{ method.name }}({{ method.input.interface }} $request): {{ method.output.interface }};
 {% endfor %}
 }
