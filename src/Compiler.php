@@ -73,6 +73,11 @@ class Compiler
         $preferences = [];
         $request = new CodeGeneratorRequest();
         $request->mergeFromString($rawRequest);
+        $params = array_filter(explode('=', $request->getParameter()));
+        $version = null;
+        if (!empty($params)) {
+            $version = $params[1];
+        }
         $protoAggregate = [];
         $files = [];
 
@@ -100,7 +105,7 @@ class Compiler
 
         $namespaceChunk = explode('\\', $namespace);
         [$vendor, $module] = [$namespaceChunk[0], $namespaceChunk[1]];
-        foreach ($this->skeletonGenerator->run($vendor, $module) as $file) {
+        foreach ($this->skeletonGenerator->run($vendor, $module, $version) as $file) {
             $files[] = $file;
         }
 
