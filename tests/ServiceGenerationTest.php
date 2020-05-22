@@ -175,6 +175,21 @@ class ServiceGenerationTest extends TestCase
     }
 
     /**
+     * Checks a case when DTO method returns scalar array.
+     *
+     * @depends testGrpcServiceInterface
+     */
+    public function testScalarArrays(): void
+    {
+        $class = new \ReflectionClass(GreetingRequestInterface::class);
+        $getFieldsMethod = $class->getMethod('getValues');
+        self::assertEquals('array', $getFieldsMethod->getReturnType()->getName());
+
+        $docBlock = $getFieldsMethod->getDocComment();
+        self::assertStringContainsString('@return string[]', $docBlock);
+    }
+
+    /**
      * Checks that generated DTOs are final classes.
      *
      * @depends testGeneration
