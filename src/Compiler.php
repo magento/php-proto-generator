@@ -93,7 +93,11 @@ class Compiler
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */
             foreach ($proto->getService() as $service) {
                 foreach ($this->clientServiceGenerator->run($namespace, $service, $protoAggregate) as $file) {
-                    $files[] = $file;
+                    if (is_array($file)) {
+                        $preferences[] = $file;
+                    } else {
+                        $files[] = $file;
+                    }
                 }
             }
         }
