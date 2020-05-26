@@ -137,6 +137,11 @@ class Service
             ];
         }
 
+        yield [
+            'class' => $serviceNamespace . '\\' . $descriptorProto->getName(),
+            'interface' => $serviceNamespace . '\\' . $descriptorProto->getName() . 'Interface'
+        ];
+
         yield $this->generateServiceInterface(
             $descriptorProto->getName() . 'Interface',
             $serviceNamespace,
