@@ -10,6 +10,7 @@ namespace Magento\ProtoGen;
 use Google\Protobuf\Compiler\CodeGeneratorRequest;
 use Google\Protobuf\Compiler\CodeGeneratorResponse;
 use Magento\ProtoGen\Generator\Di;
+use Magento\ProtoGen\Generator\Mapper;
 use Magento\ProtoGen\Generator\Metadata;
 use Magento\ProtoGen\Generator\Service as ServiceGenerator;
 use Magento\ProtoGen\Generator\NamespaceConverter;
@@ -48,6 +49,11 @@ class Compiler
     private $metadataGenerator;
 
     /**
+     * @var Mapper
+     */
+    private $mapperGenerator;
+
+    /**
      * @param string $templatesPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
@@ -55,6 +61,7 @@ class Compiler
      */
     public function __construct(string $templatesPath)
     {
+        $this->mapperGenerator = new Generator\Mapper($templatesPath);
         $this->dtoGenerator = new Generator\Dto($templatesPath);
         $this->diGenerator = new Di($templatesPath);
         $this->skeletonGenerator = new Skeleton($templatesPath);
@@ -88,6 +95,10 @@ class Compiler
                     $files[] = $file;
                 }
                 $preferences[] = $result['preferences'];
+                $resultMapper = $this->mapperGenerator->run($namespace, $descriptor);
+                foreach ($resultMapper['files'] as $file) {
+                    $files[] = $file;
+                }
             }
 
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */
