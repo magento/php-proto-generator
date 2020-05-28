@@ -63,13 +63,14 @@ class Skeleton
      *
      * @param string $vendor
      * @param string $module
+     * @param string $version
      * @return File[]
      */
-    public function run(string $vendor, string $module): \Generator
+    public function run(string $vendor, string $module, ?string $version): \Generator
     {
         $path = $vendor . '/' . $module;
         $moduleName = $vendor . '_' . $module;
-        yield $this->generateComposer($vendor, $module, $path);
+        yield $this->generateComposer($vendor, $module, $path, $version);
         yield $this->generateRegistration($moduleName, $path);
         yield $this->generateModuleXml($moduleName, $path);
     }
@@ -80,15 +81,17 @@ class Skeleton
      * @param string $vendor
      * @param string $module
      * @param string $path
+     * @param string $version
      * @return File
      */
-    private function generateComposer(string $vendor, string $module, string $path): File
+    private function generateComposer(string $vendor, string $module, string $path, ?string $version): File
     {
         $name = $this->getModuleName($module);
         $content = $this->composerTemplate->render([
             'module' => [
                 'name' => strtolower($vendor) . '/module-' . $name,
-                'namespace' => $vendor . '\\\\' . $module . '\\\\'
+                'namespace' => $vendor . '\\\\' . $module . '\\\\',
+                'version' => $version ?? '0.0.1'
             ],
         ]);
         return $this->createFile($path . '/composer.json', $content);
