@@ -10,6 +10,7 @@ namespace Magento\ProtoGen\Command;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -24,13 +25,14 @@ class Generator extends Command
         $this->setDescription("Generates Magento packages")
             ->addArgument('proto-dir', InputArgument::REQUIRED, 'Directory with proto files')
             ->addArgument('output-dir', InputArgument::REQUIRED, 'Output directory')
-        ;
+            ->addOption('composer_version', 'c', InputOption::VALUE_OPTIONAL);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $protoDir = $input->getArgument('proto-dir');
         $outputDir = $input->getArgument('output-dir');
+        $version = $input->getOption('composer_version');
 
         if (!is_dir($protoDir)) {
             throw new \InvalidArgumentException('Provided proto directory doesn\'t exist');
@@ -52,7 +54,12 @@ class Generator extends Command
             . ' --php_out=' . $outputDir
             . ' --php-grpc_out=' . $outputDir
             . ' --grpc_out=' . $outputDir
-            . ' --magento_out=' . $outputDir
+            . ' --magento_out=';
+        if (!empty($version)) {
+            $command .= 'version=' . escapeshellarg($version) . ':';
+        }
+
+        $command .= $outputDir
             . ' --plugin=protoc-gen-php-grpc=/usr/local/bin/protoc-gen-php-grpc'
             . ' --plugin=protoc-gen-grpc=/usr/local/bin/grpc_php_plugin'
             . ' --plugin=protoc-gen-magento=protoc-gen-magento'

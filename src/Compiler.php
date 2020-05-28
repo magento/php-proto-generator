@@ -80,6 +80,11 @@ class Compiler
         $preferences = [];
         $request = new CodeGeneratorRequest();
         $request->mergeFromString($rawRequest);
+        $params = array_filter(explode('=', $request->getParameter()));
+        $version = null;
+        if (!empty($params)) {
+            $version = $params[1];
+        }
         $protoAggregate = [];
         $files = [];
 
@@ -104,14 +109,18 @@ class Compiler
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */
             foreach ($proto->getService() as $service) {
                 foreach ($this->clientServiceGenerator->run($namespace, $service, $protoAggregate) as $file) {
-                    $files[] = $file;
+                    if (is_array($file)) {
+                        $preferences[] = $file;
+                    } else {
+                        $files[] = $file;
+                    }
                 }
             }
         }
 
         $namespaceChunk = explode('\\', $namespace);
         [$vendor, $module] = [$namespaceChunk[0], $namespaceChunk[1]];
-        foreach ($this->skeletonGenerator->run($vendor, $module) as $file) {
+        foreach ($this->skeletonGenerator->run($vendor, $module, $version) as $file) {
             $files[] = $file;
         }
 
