@@ -22,7 +22,7 @@ Run `docker run --rm -it -v $(pwd):/build magento/proto-generator:latest /build/
 - `-v $(pwd):/build` - mounts directory with proto files inside container in /build path
 - `/build/tests/fixtures/` - directory containing proto files
 - `/build/tests/tmp` - output directory
-- `--composer_version|-c` - version of generated composer package, this is an optional argument
+- `--composer_version|-c` - version of generated composer package, this is an optional argument (default version is 0.0.1)
 
 You can mount any amount of directories and point input/output to different directories.
 
