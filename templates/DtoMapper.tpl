@@ -73,7 +73,7 @@ final class {{ class }}Mapper
 {% for field in fields %}
 {% if field.simple %}
             case "{{ field.propertyName }}":
-                $dto->set{{ field.name }}($value);
+                $dto->set{{ field.name }}(({{ field.type }}) $value);
                 break;
 {% else %}
             case "{{ field.propertyName }}":
