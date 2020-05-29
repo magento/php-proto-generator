@@ -56,5 +56,6 @@ final class {{ class }}ArrayMapper
 {% endif %}
 {% endif %}
 {% endfor %}
+        return $result;
     }
 }
