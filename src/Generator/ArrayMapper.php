@@ -15,9 +15,9 @@ use Twig\Loader\FilesystemLoader;
 use Twig\TemplateWrapper;
 
 /**
- * Generates Mapper from the array to the Magento DTO.
+ * Generates Mapper from the Magento DTO to the array.
  */
-class Mapper
+class ArrayMapper
 {
     use FileWriter;
 
@@ -25,7 +25,7 @@ class Mapper
 
     use TypeResolver;
 
-    private const CLASS_TPL = 'DtoMapper.tpl';
+    private const CLASS_TPL = 'ArrayMapper.tpl';
 
     /**
      * Twig template
@@ -78,7 +78,7 @@ class Mapper
                 $elementType = $type = $docType = $this->fromProto(
                         $this->convertProtoNameToFqcn($field->getTypeName()),
                         'Api\\Data')
-                    . 'Mapper';
+                    . 'ArrayMapper';
                 $isSimple = false;
             }
 
@@ -108,7 +108,7 @@ class Mapper
             'fields' => $fields
         ]);
         $path = $this->convertToDirName($dtoNamespace);
-        $files[] = $this->createFile($path . '/' . $descriptor->getName() . 'Mapper' . '.php', $content);
+        $files[] = $this->createFile($path . '/' . $descriptor->getName() . 'ArrayMapper' . '.php', $content);
 
         return [
             'files' => $files
