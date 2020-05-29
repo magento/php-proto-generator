@@ -12,6 +12,7 @@
         "spiral/php-grpc": "^1.1"
     },
     "type": "magento2-module",
+    "version": "{{ module.version }}",
     "license": [
         "OSL-3.0",
         "AFL-3.0"

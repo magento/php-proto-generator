@@ -5,23 +5,25 @@
  */
 declare(strict_types=1);
 
-namespace Magento\ProtoGen\Tests;
+namespace Magento\ProtoGen\Test;
 
 use Magento\Grpc\Api\Data\GreetingRequest;
 use Magento\Grpc\Api\Data\GreetingRequestInterface;
 use Magento\Grpc\Api\Data\GreetingResponseInterface;
 use Magento\Grpc\Api\GreetingServiceInterface;
-use PHPUnit\Framework\TestCase;
 use Magento\Grpc\Api\GreetingServiceProxyServer;
-use Magento\Grpc\Proto\GreetingResponse as ProtoGreetingResponse;
-use Magento\Grpc\Proto\GreetingRequest as ProtoGreetingRequest;
-use Spiral\GRPC\ContextInterface as GrpcContextInterface;
-use Magento\Grpc\Proto\GreetingServiceInterface as ProtoGreetingServiceInterface;
-use Magento\Grpc\Api\InMemoryGreetingService;
 use Magento\Grpc\Api\GreetingServiceServerInterface;
+use Magento\Grpc\Api\InMemoryGreetingService;
+use Magento\Grpc\Proto\GreetingRequest as ProtoGreetingRequest;
+use Magento\Grpc\Proto\GreetingResponse as ProtoGreetingResponse;
+use Magento\Grpc\Proto\GreetingServiceInterface as ProtoGreetingServiceInterface;
+use PHPUnit\Framework\TestCase;
+use Spiral\GRPC\ContextInterface as GrpcContextInterface;
 
 class ServiceGenerationTest extends TestCase
 {
+    use StringFormatter;
+
     private const OUTPUT_PATH = GENERATED . '/Magento/Grpc/';
 
     public static function setUpBeforeClass(): void
@@ -79,7 +81,7 @@ class ServiceGenerationTest extends TestCase
 
         self::assertFileIsReadable(self::OUTPUT_PATH . 'Api/Data/GreetingRequestInterface.php');
         $inputParam = $method->getParameters()[0];
-        self::assertEquals(GreetingRequestInterface::class, $inputParam->getType());
+        self::assertEquals(GreetingRequestInterface::class, $inputParam->getType()->getName());
 
         self::assertFileIsReadable(self::OUTPUT_PATH . 'Api/Data/GreetingResponseInterface.php');
         $returnType = $method->getReturnType();
@@ -100,7 +102,7 @@ class ServiceGenerationTest extends TestCase
 
         self::assertEquals(
             GreetingRequestInterface::class,
-            $method->getParameters()[0]->getType()
+            $method->getParameters()[0]->getType()->getName()
         );
         self::assertEquals(
             GreetingResponseInterface::class,
@@ -127,7 +129,7 @@ class ServiceGenerationTest extends TestCase
 
         self::assertEquals(
             GreetingRequestInterface::class,
-            $method->getParameters()[0]->getType()
+            $method->getParameters()[0]->getType()->getName()
         );
         self::assertEquals(
             GreetingResponseInterface::class,
@@ -152,8 +154,8 @@ class ServiceGenerationTest extends TestCase
         $method = $class->getMethod('greet');
         self::assertInstanceOf(\ReflectionMethod::class, $method);
 
-        self::assertEquals(GrpcContextInterface::class, $method->getParameters()[0]->getType());
-        self::assertEquals(ProtoGreetingRequest::class, $method->getParameters()[1]->getType());
+        self::assertEquals(GrpcContextInterface::class, $method->getParameters()[0]->getType()->getName());
+        self::assertEquals(ProtoGreetingRequest::class, $method->getParameters()[1]->getType()->getName());
         self::assertEquals(ProtoGreetingResponse::class, $method->getReturnType()->getName());
     }
 
@@ -170,6 +172,21 @@ class ServiceGenerationTest extends TestCase
 
         $docBlock = $getFieldsMethod->getDocComment();
         self::assertStringContainsString('@return \Magento\Grpc\Api\Data\RepeatedFieldsInterface[]', $docBlock);
+    }
+
+    /**
+     * Checks a case when DTO method returns scalar array.
+     *
+     * @depends testGrpcServiceInterface
+     */
+    public function testScalarArrays(): void
+    {
+        $class = new \ReflectionClass(GreetingRequestInterface::class);
+        $getFieldsMethod = $class->getMethod('getValues');
+        self::assertEquals('array', $getFieldsMethod->getReturnType()->getName());
+
+        $docBlock = $getFieldsMethod->getDocComment();
+        self::assertStringContainsString('@return string[]', $docBlock);
     }
 
     /**

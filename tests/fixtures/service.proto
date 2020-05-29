@@ -20,6 +20,7 @@ message GreetingRequest {
     SubRequest additional_data = 3;
     repeated RepeatedFields fields = 4;
     repeated int32 repeatedInt = 5;
+    repeated string values = 5;
 }
 
 message SubResponse {
@@ -31,6 +32,7 @@ message GreetingResponse {
     string greeting = 1;
     SubResponse additional_data = 2;
     repeated RepeatedFields fields = 3;
+    repeated int32 ids = 4;
 }
 
 service GreetingService {
