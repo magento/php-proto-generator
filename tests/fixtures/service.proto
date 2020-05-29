@@ -20,7 +20,7 @@ message GreetingRequest {
     SubRequest additional_data = 3;
     repeated RepeatedFields fields = 4;
     repeated int32 repeatedInt = 5;
-    repeated string values = 5;
+    repeated string values = 6;
 }
 
 message SubResponse {
