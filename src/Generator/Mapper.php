@@ -69,6 +69,7 @@ class Mapper
 
         /** @var \Google\Protobuf\FieldDescriptorProto $field */
         foreach ($descriptor->getField() as $field) {
+            $fieldName = $field->getName();
             $name = str_replace('_', '', ucwords($field->getName(), '_'));
             $elementType = $type = $docType = $this->getType($field);
             $isSimple = true;
@@ -89,6 +90,7 @@ class Mapper
 
             $fields[] = [
                 'name' => $name,
+                'fieldName' => $fieldName,
                 'type' => $type,
                 'elementType' => $elementType,
                 'simple' => $isSimple,

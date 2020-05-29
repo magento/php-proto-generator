@@ -72,12 +72,12 @@ final class {{ class }}Mapper
         switch ($key) {
 {% for field in fields %}
 {% if field.simple %}
-            case "{{ field.propertyName }}":
+            case "{{ field.fieldName }}":
                 $dto->set{{ field.name }}(({{ field.type }}) $value);
                 break;
 {% else %}
 {% if field.type == "array" %}
-            case "{{ field.propertyName }}":
+            case "{{ field.fieldName }}":
                 $convertedArray = [];
                 foreach ($value as $element) {
                     $convertedArray[] = $this->objectManager
@@ -88,7 +88,7 @@ final class {{ class }}Mapper
                 $dto->set{{ field.name }}($convertedArray);
                 break;
 {% else %}
-            case "{{ field.propertyName }}":
+            case "{{ field.fieldName }}":
                 $dto->set{{ field.name }}(
                    $this->objectManager
                        ->get({{ field.type }}::class)
