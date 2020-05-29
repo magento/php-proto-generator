@@ -82,7 +82,7 @@ final class {{ class }}Mapper
                 foreach ($value as $element) {
                     $convertedArray[] = $this->objectManager
                         ->get({{ field.elementType }}::class)
-                        ->setData($value)
+                        ->setData($element)
                         ->build();
                 }
                 $dto->set{{ field.name }}($convertedArray);
