@@ -16,8 +16,9 @@
 
 {% elseif prop.array %}
         $res = [];
-        foreach (${{ in_var}}->get{{ prop.name }}() as $item) {
-            {{ _self.property_tree(prop.in_type, 'item', prop.out_type, out_var, prop.props, i) }}
+        {% set v_name = 'item' ~ i %}
+        foreach (${{ in_var}}->get{{ prop.name }}() as ${{ v_name }}) {
+            {{ _self.property_tree(prop.in_type, v_name, prop.out_type, out_var, prop.props, i) }}
             $res[] = ${{ out_var }};
         }
         $r->set{{ prop.name }}($res);
