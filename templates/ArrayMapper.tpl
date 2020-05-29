@@ -31,9 +31,10 @@ final class {{ class }}ArrayMapper
     /**
     * Convert the DTO to the array with the data
     *
-    * @return {{class}}
+    * @param {{ class }} $dto
+    * @return array
     */
-    public function convertToArray($dto) {
+    public function convertToArray({{ class }} $dto) {
         $result = [];
 {% for field in fields %}
 {% if field.simple %}
