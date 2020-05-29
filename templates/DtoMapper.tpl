@@ -76,6 +76,18 @@ final class {{ class }}Mapper
                 $dto->set{{ field.name }}($value);
                 break;
 {% else %}
+{% if field.type == "array" %}
+            case "{{ field.propertyName }}":
+                $convertedArray = [];
+                foreach ($value as $element) {
+                    $convertedArray[] = $this->objectManager
+                        ->get({{ field.elementType }}::class)
+                        ->setData($value)
+                        ->build();
+                }
+                $dto->set{{ field.name }}($convertedArray);
+                break;
+{% else %}
             case "{{ field.propertyName }}":
                 $dto->set{{ field.name }}(
                    $this->objectManager
@@ -83,6 +95,7 @@ final class {{ class }}Mapper
                        ->setData($value)
                        ->build());
                 break;
+{% endif %}
 {% endif %}
 {% endfor %}
         }
