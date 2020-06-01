@@ -50,16 +50,6 @@ class Compiler
     private $metadataGenerator;
 
     /**
-     * @var Mapper
-     */
-    private $mapperGenerator;
-
-    /**
-     * @var ArrayMapper
-     */
-    private $arrayMapperGenerator;
-
-    /**
      * @param string $templatesPath
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
@@ -67,8 +57,6 @@ class Compiler
      */
     public function __construct(string $templatesPath)
     {
-        $this->mapperGenerator = new Generator\Mapper($templatesPath);
-        $this->arrayMapperGenerator = new Generator\ArrayMapper($templatesPath);
         $this->dtoGenerator = new Generator\Dto($templatesPath);
         $this->diGenerator = new Di($templatesPath);
         $this->skeletonGenerator = new Skeleton($templatesPath);
@@ -107,14 +95,6 @@ class Compiler
                     $files[] = $file;
                 }
                 $preferences[] = $result['preferences'];
-                $resultMapper = $this->mapperGenerator->run($namespace, $descriptor);
-                foreach ($resultMapper['files'] as $file) {
-                    $files[] = $file;
-                }
-                $resultArrayMapper = $this->arrayMapperGenerator->run($namespace, $descriptor);
-                foreach ($resultArrayMapper['files'] as $file) {
-                    $files[] = $file;
-                }
             }
 
             /** @var \Google\Protobuf\ServiceDescriptorProto $service */

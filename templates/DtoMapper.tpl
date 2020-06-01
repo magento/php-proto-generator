@@ -71,7 +71,7 @@ final class {{ class }}Mapper
     {
         switch ($key) {
 {% for field in fields %}
-{% if field.simple %}
+{% if not field.is_object %}
             case "{{ field.fieldName }}":
                 $dto->set{{ field.name }}(({{ field.type }}) $value);
                 break;

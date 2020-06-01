@@ -37,7 +37,7 @@ final class {{ class }}ArrayMapper
     public function convertToArray({{ class }} $dto) {
         $result = [];
 {% for field in fields %}
-{% if field.simple %}
+{% if not field.is_object %}
         $result["{{ field.fieldName }}"] = $dto->get{{ field.name }}();
 {% else %}
 {% if field.type == "array" %}

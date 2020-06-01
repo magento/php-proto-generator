@@ -21,13 +21,13 @@ class Dto
 {
     use FileWriter;
 
-    use NamespaceConverter;
-
-    use TypeResolver;
-
     private const CLASS_TPL = 'dto.tpl';
 
     private const INTERFACE_TPL = 'dtoInterface.tpl';
+
+    private const MAPPER_TPL = 'DtoMapper.tpl';
+
+    private const ARRAY_MAPPER_TPL = 'ArrayMapper.tpl';
 
     /**
      * Twig template
@@ -40,6 +40,16 @@ class Dto
      * @var TemplateWrapper
      */
     private $interfaceTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
+    private $arrayMapperTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
+    private $dtoMapperTemplate;
 
     /**
      * @param string $templatesPath
@@ -55,6 +65,8 @@ class Dto
         ]);
         $this->classTemplate = $twig->load(self::CLASS_TPL);
         $this->interfaceTemplate = $twig->load(self::INTERFACE_TPL);
+        $this->arrayMapperTemplate = $twig->load(self::ARRAY_MAPPER_TPL);
+        $this->dtoMapperTemplate = $twig->load(self::MAPPER_TPL);
     }
 
     /**
@@ -66,61 +78,29 @@ class Dto
      */
     public function run(string $namespace, DescriptorProto $descriptor): array
     {
-        $fields = [];
         $files = [];
-        $dtoNamespace = $this->fromProto($namespace, 'Api\\Data');
 
-        /** @var \Google\Protobuf\FieldDescriptorProto $field */
-        foreach ($descriptor->getField() as $field) {
-            $name = str_replace('_', '', ucwords($field->getName(), '_'));
-            $type = $docType = $this->getType($field);
-            $isSimple = true;
-            // check if a getter method parameter is a simple type
-            if ((int) $type === Type::TYPE_MESSAGE) {
-                $type = $docType = $this->fromProto(
-                        $this->convertProtoNameToFqcn($field->getTypeName()),
-                        'Api\\Data')
-                    . 'Interface';
-                $isSimple = false;
-            }
-            // check if message is repeated
-            if ($field->getLabel() === Label::LABEL_REPEATED) {
-                $docType .= '[]';
-                $type = 'array';
-                $isSimple = true;
-            }
-            $fields[] = [
-                'name' => $name,
-                'type' => $type,
-                'simple' => $isSimple,
-                'propertyName' => lcfirst($name),
-                'doc' => [
-                    'input' => $docType,
-                    'output' => $docType
-                ]
-            ];
-        }
+        $dtoDescriptor = new DescriptorMagentoDto();
+        $contentData = $dtoDescriptor->describe($namespace, $descriptor);
 
-        $content = $this->classTemplate->render([
-            'namespace' => $dtoNamespace,
-            'class' => $descriptor->getName(),
-            'fields' => $fields
-        ]);
-        $path = $this->convertToDirName($dtoNamespace);
+        $content = $this->classTemplate->render($contentData);
+        $path = $this->convertToDirName($contentData['namespace']);
         $files[] = $this->createFile($path . '/' . $descriptor->getName() . '.php', $content);
 
-        $content = $this->interfaceTemplate->render([
-            'namespace' => $dtoNamespace,
-            'class' => $descriptor->getName(),
-            'fields' => $fields
-        ]);
+        $content = $this->interfaceTemplate->render($contentData);
         $files[] = $this->createFile($path . '/' . $descriptor->getName() . 'Interface.php', $content);
+
+        $content = $this->dtoMapperTemplate->render($contentData);
+        $files[] = $this->createFile($path . '/' . $descriptor->getName() . 'Mapper.php', $content);
+
+        $content = $this->arrayMapperTemplate->render($contentData);
+        $files[] = $this->createFile($path . '/' . $descriptor->getName() . 'ArrayMapper.php', $content);
 
         return [
             'files' => $files,
             'preferences' => [
-                'interface' => $dtoNamespace . '\\' . $descriptor->getName() . 'Interface',
-                'class' => $dtoNamespace . '\\' . $descriptor->getName(),
+                'interface' => $contentData['namespace'] . '\\' . $descriptor->getName() . 'Interface',
+                'class' => $contentData['namespace'] . '\\' . $descriptor->getName(),
             ],
         ];
     }
