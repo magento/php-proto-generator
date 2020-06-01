@@ -17,7 +17,7 @@ final class {{ class }}Mapper
     /**
      * @var string
      */
-    private static $dtoClassName = {{ class }}::class;
+    private static $dtoClassName = {{ class }}Interface::class;
 
     /**
      * @var mixed
@@ -81,7 +81,7 @@ final class {{ class }}Mapper
                 $convertedArray = [];
                 foreach ($value as $element) {
                     $convertedArray[] = $this->objectManager
-                        ->get({{ field.elementType }}::class)
+                        ->create({{ field.fieldType }}Mapper::class)
                         ->setData($element)
                         ->build();
                 }
@@ -91,7 +91,7 @@ final class {{ class }}Mapper
             case "{{ field.fieldName }}":
                 $dto->set{{ field.name }}(
                    $this->objectManager
-                       ->get({{ field.type }}::class)
+                       ->create({{ field.fieldType }}Mapper::class)
                        ->setData($value)
                        ->build());
                 break;

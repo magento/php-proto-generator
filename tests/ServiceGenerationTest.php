@@ -7,9 +7,12 @@ declare(strict_types=1);
 
 namespace Magento\ProtoGen\Test;
 
+use Magento\Framework\ObjectManagerInterface;
 use Magento\Grpc\Api\Data\GreetingRequest;
 use Magento\Grpc\Api\Data\GreetingRequestInterface;
+use Magento\Grpc\Api\Data\GreetingRequestMapper;
 use Magento\Grpc\Api\Data\GreetingResponseInterface;
+use Magento\Grpc\Api\Data\SubRequest;
 use Magento\Grpc\Api\GreetingServiceInterface;
 use Magento\Grpc\Api\GreetingServiceProxyServer;
 use Magento\Grpc\Api\GreetingServiceServerInterface;
@@ -201,5 +204,54 @@ class ServiceGenerationTest extends TestCase
 
         $class = new \ReflectionClass(GreetingRequest::class);
         self::assertTrue($class->isFinal());
+    }
+
+    /**
+     * Verify DTO Mappers construct correct DTOs
+     *
+     * @depends testGeneration
+     */
+    public function testDtoMapperScalar(): void
+    {
+        $path = self::OUTPUT_PATH . 'Api/Data/GreetingRequestMapper.php';
+        self::assertFileIsReadable($path);
+        $path = self::OUTPUT_PATH . 'Api/Data/SubRequestMapper.php';
+        self::assertFileIsReadable($path);
+        $path = self::OUTPUT_PATH . 'Api/Data/GreetingRequest.php';
+        self::assertFileIsReadable($path);
+        $path = self::OUTPUT_PATH . 'Api/Data/SubRequest.php';
+        self::assertFileIsReadable($path);
+
+        $dto = new GreetingRequest();
+        $subRequest = new \Magento\Grpc\Api\Data\SubRequest();
+        $objectManagerMock = $this->createMock(ObjectManagerInterface::class);
+        $objectManagerMock->expects($this->once())
+            ->method("create")
+            ->with(\Magento\Grpc\Api\Data\SubRequestInterface::class)
+            ->willReturn($subRequest);
+        $subRequest = new \Magento\Grpc\Api\Data\SubRequestMapper($objectManagerMock);
+
+        $objectManagerMock2 = $this->createMock(ObjectManagerInterface::class);
+        $objectManagerMock2->expects($this->at(0))
+            ->method("create")
+            ->with(GreetingRequestInterface::class)
+            ->willReturn($dto);
+        $objectManagerMock2->expects($this->at(1))
+            ->method("create")
+            ->with(\Magento\Grpc\Api\Data\SubRequestMapper::class)
+            ->willReturn($subRequest);
+
+        $mapper = new GreetingRequestMapper($objectManagerMock2);
+        $mapper->setData([
+            'name' => 'test',
+            'number' => 1,
+            'additional_data' => [
+                'date' => 'test'
+            ]
+        ])
+        ->build();
+        $this->assertEquals('test', $dto->getName());
+        $this->assertEquals(1, $dto->getNumber());
+        $this->assertEquals('test', $dto->getAdditionalData()->getDate());
     }
 }

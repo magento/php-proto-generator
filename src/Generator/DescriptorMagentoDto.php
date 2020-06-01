@@ -52,7 +52,7 @@ class DescriptorMagentoDto {
              *
              * DocType is the type of the field for the scalar and Object types or type with "[]" suffix for the array
              */
-            $elementType = $type = $docType = $this->getType($field);
+            $fieldType = $elementType = $type = $docType = $this->getType($field);
 
             /**
              * Simple field type indicates that it would be type casted to the type of the field
@@ -67,10 +67,10 @@ class DescriptorMagentoDto {
 
             // check if a getter method parameter is a simple type
             if ((int) $type === Type::TYPE_MESSAGE) {
-                $elementType = $type = $docType = $this->fromProto(
+                $fieldType = $elementType = $type = $docType = $this->fromProto(
                         $this->convertProtoNameToFqcn($field->getTypeName()),
-                        'Api\\Data')
-                    . 'Interface';
+                        'Api\\Data');
+                $elementType = $type = $docType = $type .'Interface';
                 $isSimple = false;
                 $isObject = true;
             }
@@ -83,6 +83,7 @@ class DescriptorMagentoDto {
             $fields[] = [
                 'name' => $name,
                 'fieldName' => $fieldName,
+                'fieldType' => $fieldType,
                 'type' => $type,
                 'elementType' => $elementType,
                 'simple' => $isSimple,
