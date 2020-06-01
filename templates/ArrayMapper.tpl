@@ -44,15 +44,15 @@ final class {{ class }}ArrayMapper
         /** Convert complex Array field **/
         $fieldArray = [];
         foreach ($dto->get{{ field.name }}() as $fieldArrayDto) {
-            $fieldData[] = $this->objectManager
-                ->get({{ field.elementType }}::class)
+            $fieldData[] = $this->objectManager->get({{ field.elementType }}::class)
                 ->convertToArray($fieldArrayDto);
         }
         $result["{{ field.fieldName }}"] = $fieldArray;
 {% else %}
-        $result["{{ field.fieldName }}"] = $this->objectManager
-            ->get({{ field.elementType }}::class)
-            ->convertToArray($dto->get{{ field.name }}());
+        if ($dto->get{{ field.name }}() !== null) {
+            $result["{{ field.fieldName }}"] = $this->objectManager->get({{ field.elementType }}::class)
+                ->convertToArray($dto->get{{ field.name }}());
+        }
 {% endif %}
 {% endif %}
 {% endfor %}
