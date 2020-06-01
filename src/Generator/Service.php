@@ -229,18 +229,16 @@ class Service
                 'array' => false,
                 'object' => false
             ];
+            if ($field->getLabel() === FieldDescriptorProto\Label::LABEL_REPEATED) {
+                $property['array'] = true;
+            }
             if ((int)$type === Type::TYPE_MESSAGE) {
                 $className = $this->convertProtoNameToFqcn($field->getTypeName());
                 // getter returns array of objects
                 $property[$in] = $this->fromProto($className, 'Api\\Data');
                 $property[$out] = $className;
                 $property['props'] = $this->getPropertyList($className, $fileDescriptorAggregate, $in, $out);
-                if ($field->getLabel() === FieldDescriptorProto\Label::LABEL_REPEATED) {
-                    $property['array'] = true;
-                    // getter returns an object
-                } else {
-                    $property['object'] = true;
-                }
+                $property['object'] = true;
             }
             $props[] = $property;
         }

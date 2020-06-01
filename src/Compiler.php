@@ -9,7 +9,9 @@ namespace Magento\ProtoGen;
 
 use Google\Protobuf\Compiler\CodeGeneratorRequest;
 use Google\Protobuf\Compiler\CodeGeneratorResponse;
+use Magento\ProtoGen\Generator\ArrayMapper;
 use Magento\ProtoGen\Generator\Di;
+use Magento\ProtoGen\Generator\Mapper;
 use Magento\ProtoGen\Generator\Metadata;
 use Magento\ProtoGen\Generator\Service as ServiceGenerator;
 use Magento\ProtoGen\Generator\NamespaceConverter;

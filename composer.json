@@ -14,6 +14,7 @@
   },
   "autoload": {
     "psr-4": {
+      "Magento\\Framework\\": "tests/stubs",
       "Magento\\ProtoGen\\": "src",
       "Magento\\ProtoGen\\Test\\": "tests",
       "Google\\": "lib/Google",
