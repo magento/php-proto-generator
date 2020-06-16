@@ -24,6 +24,7 @@ use {{ method.output.interface|split('\\', 2)[1] }};
  * @SuppressWarnings(PHPMD.CyclomaticComplexity)
  * @SuppressWarnings(PHPMD.NPathComplexity)
  * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+ * @SuppressWarnings(PHPMD.UnusedFormalParameter)
  */
 class {{ name }} implements {{ interface }}
 {
