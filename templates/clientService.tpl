@@ -57,6 +57,7 @@ class {{ name }} implements {{ interface }}
      *
      * @param {{ methodInputInterfaceName }} $request
      * @return {{ methodOutputInterfaceName }}
+     * @throws \Throwable
      */
     public function {{ method.name }}({{ methodInputInterfaceName }} $request): {{ methodOutputInterfaceName }}
     {
