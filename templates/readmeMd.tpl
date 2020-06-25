@@ -1,3 +1,3 @@
 # Overview
 
-{{ module.name }} is responsible for providing API to expose data for appropriate services.
+{{ module.name }} is responsible for providing interfaces to expose data for appropriate services.
