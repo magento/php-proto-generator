@@ -23,6 +23,8 @@ class Skeleton
 
     private const REGISTRATION_TPL = 'registrationPhp.tpl';
 
+    private const README_MD_TPL = 'readmeMd.tpl';
+
     private const MODULE_XML_TPL = 'moduleXml.tpl';
 
     /**
@@ -34,6 +36,11 @@ class Skeleton
      * @var TemplateWrapper
      */
     private $registrationTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
+    private $readmeMdTemplate;
 
     /**
      * @var TemplateWrapper
@@ -55,6 +62,7 @@ class Skeleton
 
         $this->composerTemplate = $twig->load(self::COMPOSER_TPL);
         $this->registrationTemplate = $twig->load(self::REGISTRATION_TPL);
+        $this->readmeMdTemplate = $twig->load(self::README_MD_TPL);
         $this->moduleXmlTemplate = $twig->load(self::MODULE_XML_TPL);
     }
 
@@ -71,6 +79,7 @@ class Skeleton
         $moduleName = $vendor . '_' . $module;
         yield $this->generateComposer($vendor, $module, $path);
         yield $this->generateRegistration($moduleName, $path);
+        yield $this->generateReadmeMd($moduleName, $path);
         yield $this->generateModuleXml($moduleName, $path);
     }
 
@@ -109,6 +118,23 @@ class Skeleton
             ],
         ]);
         return $this->createFile($path . '/registration.php', $content);
+    }
+
+    /**
+     * Generates `README.md` file.
+     *
+     * @param string $moduleName
+     * @param string $path
+     * @return File
+     */
+    private function generateReadmeMd(string $moduleName, string $path): File
+    {
+        $content = $this->readmeMdTemplate->render([
+            'module' => [
+                'name' => $moduleName
+            ],
+        ]);
+        return $this->createFile($path . '/README.md', $content);
     }
 
     /**
