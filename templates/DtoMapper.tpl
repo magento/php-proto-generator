@@ -69,6 +69,10 @@ final class {{ class }}Mapper
     */
     private function setByKey({{class}} $dto, string $key, $value): void
     {
+        if ($value === null) {
+            return;
+        }
+
         switch ($key) {
 {% for field in fields %}
 {% if not field.is_object %}
