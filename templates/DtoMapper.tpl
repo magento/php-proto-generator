@@ -52,6 +52,9 @@ final class {{ class }}Mapper
     public function build() {
         $dto = $this->objectManager->create(self::$dtoClassName);
         foreach ($this->data as $key => $valueData) {
+            if ($valueData === null) {
+                continue;
+            }
             $this->setByKey($dto, $key, $valueData);
         }
         return $dto;
@@ -69,10 +72,6 @@ final class {{ class }}Mapper
     */
     private function setByKey({{class}} $dto, string $key, $value): void
     {
-        if ($value === null) {
-            return;
-        }
-
         switch ($key) {
 {% for field in fields %}
 {% if not field.is_object %}
