@@ -89,6 +89,8 @@ class DescriptorMagentoDto {
                 'simple' => $isSimple,
                 'is_object' => $isObject,
                 'propertyName' => lcfirst($name),
+                'toArrayMapper' => $fieldType . 'ArrayMapper',
+                'toDtoMapper' => $fieldType . 'Mapper',
                 'doc' => [
                     'input' => $docType,
                     'output' => $docType
