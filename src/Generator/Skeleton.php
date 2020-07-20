@@ -23,7 +23,13 @@ class Skeleton
 
     private const REGISTRATION_TPL = 'registrationPhp.tpl';
 
+    private const README_MD_TPL = 'readmeMd.tpl';
+
     private const MODULE_XML_TPL = 'moduleXml.tpl';
+
+    private const LICENSE_TPL = 'license.tpl';
+
+    private const LICENSE_AFL_TPL = 'licenseAfl.tpl';
 
     /**
      * @var TemplateWrapper
@@ -38,7 +44,22 @@ class Skeleton
     /**
      * @var TemplateWrapper
      */
+    private $readmeMdTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
     private $moduleXmlTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
+    private $licenseTemplate;
+
+    /**
+     * @var TemplateWrapper
+     */
+    private $licenseAflTemplate;
 
     /**
      * @param string $templatesPath
@@ -55,7 +76,10 @@ class Skeleton
 
         $this->composerTemplate = $twig->load(self::COMPOSER_TPL);
         $this->registrationTemplate = $twig->load(self::REGISTRATION_TPL);
+        $this->readmeMdTemplate = $twig->load(self::README_MD_TPL);
         $this->moduleXmlTemplate = $twig->load(self::MODULE_XML_TPL);
+        $this->licenseTemplate = $twig->load(self::LICENSE_TPL);
+        $this->licenseAflTemplate = $twig->load(self::LICENSE_AFL_TPL);
     }
 
     /**
@@ -72,7 +96,10 @@ class Skeleton
         $moduleName = $vendor . '_' . $module;
         yield $this->generateComposer($vendor, $module, $path, $version);
         yield $this->generateRegistration($moduleName, $path);
+        yield $this->generateReadmeMd($moduleName, $path);
         yield $this->generateModuleXml($moduleName, $path);
+        yield $this->generateLicense($path);
+        yield $this->generateLicenseAfl($path);
     }
 
     /**
@@ -112,6 +139,47 @@ class Skeleton
             ],
         ]);
         return $this->createFile($path . '/registration.php', $content);
+    }
+
+    /**
+     * Generates `README.md` file.
+     *
+     * @param string $moduleName
+     * @param string $path
+     * @return File
+     */
+    private function generateReadmeMd(string $moduleName, string $path): File
+    {
+        $content = $this->readmeMdTemplate->render([
+            'module' => [
+                'name' => $moduleName
+            ],
+        ]);
+        return $this->createFile($path . '/README.md', $content);
+    }
+
+    /**
+     * Generates `LICENCE.txt` file.
+     *
+     * @param string $path
+     * @return File
+     */
+    private function generateLicense(string $path): File
+    {
+        $content = $this->licenseTemplate->render();
+        return $this->createFile($path . '/LICENCE.txt', $content);
+    }
+
+    /**
+     * Generates `LICENCE_AFL.txt` file.
+     *
+     * @param string $path
+     * @return File
+     */
+    private function generateLicenseAfl(string $path): File
+    {
+        $content = $this->licenseAflTemplate->render();
+        return $this->createFile($path . '/LICENCE_AFL.txt', $content);
     }
 
     /**
