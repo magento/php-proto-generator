@@ -44,13 +44,13 @@ final class {{ class }}ArrayMapper
         /** Convert complex Array field **/
         $fieldArray = [];
         foreach ($dto->get{{ field.name }}() as $fieldArrayDto) {
-            $fieldData[] = $this->objectManager->get({{ field.elementType }}::class)
+            $fieldArray[] = $this->objectManager->get({{ field.toArrayMapper }}::class)
                 ->convertToArray($fieldArrayDto);
         }
         $result["{{ field.fieldName }}"] = $fieldArray;
 {% else %}
         if ($dto->get{{ field.name }}() !== null) {
-            $result["{{ field.fieldName }}"] = $this->objectManager->get({{ field.elementType }}::class)
+            $result["{{ field.fieldName }}"] = $this->objectManager->get({{ field.toArrayMapper }}::class)
                 ->convertToArray($dto->get{{ field.name }}());
         }
 {% endif %}
