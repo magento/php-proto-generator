@@ -84,7 +84,7 @@ final class {{ class }}Mapper
                 $convertedArray = [];
                 foreach ($value as $element) {
                     $convertedArray[] = $this->objectManager
-                        ->create({{ field.fieldType }}Mapper::class)
+                        ->create({{ field.toDtoMapper }}::class)
                         ->setData($element)
                         ->build();
                 }
@@ -94,7 +94,7 @@ final class {{ class }}Mapper
             case "{{ field.fieldName }}":
                 $dto->set{{ field.name }}(
                    $this->objectManager
-                       ->create({{ field.fieldType }}Mapper::class)
+                       ->create({{ field.toDtoMapper }}::class)
                        ->setData($value)
                        ->build());
                 break;
