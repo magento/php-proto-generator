@@ -41,14 +41,19 @@ class Generator extends Command
         if (!is_writable($outputDir)) {
             throw new \InvalidArgumentException('Output directory is not writable');
         }
-        $protos = [];
-        foreach (new \DirectoryIterator($protoDir) as $fileInfo) {
-            if ($fileInfo->isFile() && $fileInfo->getExtension() == 'proto') {
-                $protos[] = $fileInfo->getRealPath();
-            }
+        $protoList = [];
+        $dirIterator = new \RecursiveDirectoryIterator($protoDir);
+        $iterator = new \RecursiveIteratorIterator($dirIterator);
+        $regex = new \RegexIterator($iterator, '/^.+\.proto$/i', \RecursiveRegexIterator::GET_MATCH);
+        foreach ($regex as $it) {
+            $protoList[] = $it[0];
         }
 
-        $protos = implode(' ', $protos);
+        if (empty($protoList)) {
+            throw new \InvalidArgumentException('No protobuf contracts found in "' . $protoDir . '"');
+        }
+
+        $protoList = implode(' ', $protoList);
 
         $command = 'protoc'
             . ' --php_out=' . $outputDir
@@ -64,7 +69,7 @@ class Generator extends Command
             . ' --plugin=protoc-gen-grpc=/usr/local/bin/grpc_php_plugin'
             . ' --plugin=protoc-gen-magento=protoc-gen-magento'
             . ' -I ' . $protoDir
-            . ' ' . $protos;
+            . ' ' . $protoList;
 
         exec($command, $out, $code);
 

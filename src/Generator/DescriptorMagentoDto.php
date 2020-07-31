@@ -30,6 +30,7 @@ class DescriptorMagentoDto {
     public function describe(string $namespace, DescriptorProto $descriptor) {
         $dtoNamespace = $this->fromProto($namespace, 'Api\\Data');
         /** @var \Google\Protobuf\FieldDescriptorProto $field */
+        $fields = [];
         foreach ($descriptor->getField() as $field) {
             /**
              * Name is used in to construct getters and setters name. Thus we convert proto fields names
