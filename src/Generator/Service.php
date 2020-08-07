@@ -232,7 +232,7 @@ class Service
             if ($field->getLabel() === FieldDescriptorProto\Label::LABEL_REPEATED) {
                 $property['array'] = true;
             }
-            if ((int)$type === Type::TYPE_MESSAGE) {
+            if ((int) $type === Type::TYPE_MESSAGE) {
                 $className = $this->convertProtoNameToFqcn($field->getTypeName());
                 // getter returns array of objects
                 $property[$in] = $this->fromProto($className, 'Api\\Data');
