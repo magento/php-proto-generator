@@ -36,5 +36,6 @@ message GreetingResponse {
 }
 
 service GreetingService {
+    rpc beforeGreet(GreetingRequest) returns (GreetingRequest) {}
     rpc greet(GreetingRequest) returns (GreetingResponse) {}
 }
