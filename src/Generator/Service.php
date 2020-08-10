@@ -83,59 +83,43 @@ class Service
      *
      * @param string $namespace
      * @param ServiceDescriptorProto $descriptorProto
-     * @param array $filleDescriptorAggr
+     * @param array $fileDescriptorAggr
      * @return array
      */
     public function run(
         string $namespace,
         ServiceDescriptorProto $descriptorProto,
-        array $filleDescriptorAggr
+        array $fileDescriptorAggr
     ): \Generator {
         $serviceNamespace = str_replace('Proto', 'Api', $namespace);
         $protoServiceClass = $namespace . '\\' . $descriptorProto->getName() . 'Client';
 
         $methods = [];
+        $imports = [];
+        $protoImports = [];
         /** @var \Google\Protobuf\MethodDescriptorProto $method */
         foreach ($descriptorProto->getMethod() as $method) {
             $pInput = $this->convertProtoNameToFqcn($method->getInputType());
             $pOutput = $this->convertProtoNameToFqcn($method->getOutputType());
             $mInput = $this->fromProto($pInput, 'Api\\Data');
             $mOutput = $this->fromProto($pOutput, 'Api\\Data');
+            $imports[] = $mInput . 'Interface';
+            $imports[] = $mOutput . 'Interface';
+            $protoImports[] = $pInput;
+            $protoImports[] = $pOutput;
             $methods[] = [
                 'name' => $method->getName(),
-                'input' => [
-                    'interface' => $mInput . 'Interface',
-                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent(
-                        $mInput,
-                        $pInput,
-                        $filleDescriptorAggr
-                    ),
-                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent(
-                        $mInput,
-                        $pInput,
-                        $filleDescriptorAggr
-                    ),
-                ],
-                'output' => [
-                    'class' => $mOutput,
-                    'interface' => $mOutput . 'Interface',
-                    'toProtoContent' => $this->getMagentoToProtoDtoConverterContent(
-                        $mOutput,
-                        $pOutput,
-                        $filleDescriptorAggr
-                    ),
-                    'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent(
-                        $mOutput,
-                        $pOutput,
-                        $filleDescriptorAggr
-                    ),
-                ],
+                'input' => $this->prepareType($mInput, $pInput, $fileDescriptorAggr),
+                'output' => $this->prepareType($mOutput, $pOutput, $fileDescriptorAggr),
                 'proto' => [
-                    'input' => $pInput,
-                    'output' => $pOutput,
+                    'input' => $this->getNameFromFqcn($pInput),
+                    'output' => $this->getNameFromFqcn($pOutput),
                 ],
             ];
         }
+
+        $imports = array_unique($imports);
+        $protoImports = array_unique($protoImports);
 
         yield [
             'class' => $serviceNamespace . '\\' . $descriptorProto->getName(),
@@ -145,23 +129,29 @@ class Service
         yield $this->generateServiceInterface(
             $descriptorProto->getName() . 'Interface',
             $serviceNamespace,
-            $methods
+            $methods,
+            $imports
         );
 
         yield $this->generateServiceInterface(
             $descriptorProto->getName() . 'ServerInterface',
             $serviceNamespace,
-            $methods
+            $methods,
+            $imports
         );
 
+        // generate gRPC client service
+        $protoImports[] = '\\' . $protoServiceClass;
         $content = $this->serviceTemplate->render(
             [
                 'namespace' => $serviceNamespace,
                 'interface' => $descriptorProto->getName() . 'Interface',
                 'name' => $descriptorProto->getName(),
                 'methods' => $methods,
+                'imports' => $imports,
                 'proto' => [
-                    'class' => '\\' . $protoServiceClass,
+                    'class' => $this->getNameFromFqcn($protoServiceClass),
+                    'imports' => $protoImports
                 ]
             ]
         );
@@ -170,12 +160,14 @@ class Service
             $content
         );
 
+        // generate gRPC in-memory client
         $content = $this->inMemoryServiceTemplate->render(
             [
                 'namespace' => $serviceNamespace,
                 'interface' => $descriptorProto->getName() . 'Interface',
                 'name' => 'InMemory' . $descriptorProto->getName(),
                 'methods' => $methods,
+                'imports' => $imports,
                 'serverInterface' => $descriptorProto->getName() . 'ServerInterface'
             ]
         );
@@ -184,12 +176,15 @@ class Service
             $content
         );
 
+        // generate gRPC proxy server
         $content = $this->serverProxyTemplate->render(
             [
                 'namespace' => $serviceNamespace,
                 'interface' => '\\' . $namespace . '\\' . $descriptorProto->getName() . 'Interface',
                 'name' => $descriptorProto->getName() . 'ProxyServer',
                 'methods' => $methods,
+                'imports' => $imports,
+                'protoImports' => $protoImports,
                 'serverInterface' => $descriptorProto->getName() . 'ServerInterface'
             ]
         );
@@ -334,24 +329,66 @@ class Service
     }
 
     /**
+     * Generates service interface class.
+     *
      * @param string $interfaceName
      * @param string $namespace
      * @param array $methods
+     * @param array $imports
      * @return \Google\Protobuf\Compiler\CodeGeneratorResponse\File
      */
     private function generateServiceInterface(
         string $interfaceName,
         string $namespace,
-        array $methods
+        array $methods,
+        array $imports
     ) {
         $content = $this->interfaceTemplate->render(
             [
                 'namespace' => $namespace,
                 'name' => $interfaceName,
-                'methods' => $methods
+                'methods' => $methods,
+                'imports' => $imports
             ]
         );
         $path = $this->convertToDirName($namespace);
         return $this->createFile($path . '/' . $interfaceName . '.php', $content);
+    }
+
+    /**
+     * Splits FQCN by `\` and returns a class/interface name.
+     *
+     * @param string $fqcn
+     * @return string
+     */
+    private function getNameFromFqcn(string $fqcn): string
+    {
+        $chunks = explode('\\', $fqcn);
+        $className = array_pop($chunks);
+        return $className;
+    }
+
+    /**
+     * @param string $magentoType
+     * @param string $protoType
+     * @param array $fileDescriptorAggr
+     * @return array
+     */
+    private function prepareType(string $magentoType, string $protoType, array $fileDescriptorAggr): array
+    {
+        return [
+            'class' => $magentoType,
+            'type' => $this->getNameFromFqcn($magentoType . 'Interface'),
+            'toProtoContent' => $this->getMagentoToProtoDtoConverterContent(
+                $magentoType,
+                $protoType,
+                $fileDescriptorAggr
+            ),
+            'fromProtoContent' => $this->getProtoToMagentoDtoConverterContent(
+                $magentoType,
+                $protoType,
+                $fileDescriptorAggr
+            ),
+        ];
     }
 }
