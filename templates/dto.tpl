@@ -20,6 +20,7 @@ namespace {{ namespace }};
  * @SuppressWarnings(PHPMD.CyclomaticComplexity)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.NPathComplexity)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 final class {{ class }} implements {{ class }}Interface
 {

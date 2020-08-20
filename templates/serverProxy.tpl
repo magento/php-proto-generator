@@ -48,6 +48,7 @@ class {{ name }} implements {{ interface }}
      * @param \Spiral\GRPC\ContextInterface $ctx
      * @param {{ method.proto.input }} $in
      * @return {{ method.proto.output }}
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function {{ method.name }}(\Spiral\GRPC\ContextInterface $ctx, {{ method.proto.input }} $in): {{ method.proto.output }}
     {
