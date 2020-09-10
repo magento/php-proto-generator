@@ -25,8 +25,8 @@ $r->set{{ prop.name }}($res);
     {% endif %}
 {% elseif prop.array %}
     $values = [];
-    foreach (${{ in_var }}->get{{ prop.name }}() as $value) {
-        $values[] = $value;
+    foreach (${{ in_var }}->get{{ prop.name }}() as $newValue) {
+        $values[] = $newValue;
     }
     $r->set{{ prop.name }}($values);
 {% else %}
