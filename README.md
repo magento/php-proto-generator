@@ -29,3 +29,9 @@ You can mount any amount of directories and point input/output to different dire
 
 ## Testing
 Run `docker run --rm -it -v $(pwd):/build --entrypoint="/app/vendor/bin/phpunit" magento/proto-generator:latest `
+
+### Contributing
+Contributions are welcomed! Read the [Contributing Guide](./CONTRIBUTING.md) for more information.
+
+### Licensing
+This project is licensed under the OSL-3.0 License. See [LICENSE](./LICENSE.md) for more information.
